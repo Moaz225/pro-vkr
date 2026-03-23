@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BRODSKY. — Заказы для персонала</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #f0f0f0; padding: 20px; }
+    .staff-page { max-width: 1000px; margin: 0 auto; }
+    .staff-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .staff-header h1 { color: var(--primary); font-size: 1.75rem; margin: 0; }
+    .staff-header a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .staff-header a:hover { text-decoration: underline; }
+    .staff-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .95rem;
+    }
+    .staff-refresh:hover { background: var(--primary-dark); }
+    .staff-auto { font-size: .85rem; color: #666; margin-top: 4px; }
+    .sound-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .sound-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .95rem;
+    }
+    .sound-btn.sound-on { background: #2e7d32; }
+    .sound-btn:hover { filter: brightness(1.05); }
+    .sound-vol {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .9rem;
+      color: #444;
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: 999px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.06);
+    }
+    .sound-vol input[type="range"] { width: 120px; }
+    .tab-btn.active { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
+    .orders-list { display: flex; flex-direction: column; gap: 16px; }
+    .order-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.08);
+      border-left: 4px solid var(--primary);
+    }
+    .order-card.status-in_progress { border-left-color: #2196f3; }
+    .order-card.status-done { border-left-color: #4caf50; opacity: .85; }
+    .order-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .order-id { font-weight: 700; font-size: 1.1rem; color: var(--dark); }
+    .order-time { font-size: .9rem; color: #666; }
+    .order-status {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: .85rem;
+      font-weight: 600;
+    }
+    .order-status.status-new { background: rgba(255,119,0,.2); color: var(--primary-dark); }
+    .order-status.status-in_progress { background: rgba(33,150,243,.2); color: #1976d2; }
+    .order-status.status-done { background: rgba(76,175,80,.2); color: #2e7d32; }
+    .order-body { margin-bottom: 12px; }
+    .order-items { list-style: none; margin: 0; padding: 0; }
+    .order-items li {
+      padding: 6px 0;
+      border-bottom: 1px dashed #eee;
+      display: flex; justify-content: space-between; gap: 12px;
+    }
+    .order-items li:last-child { border-bottom: none; }
+    .order-total { font-weight: 700; font-size: 1.1rem; color: var(--primary); margin-top: 8px; }
+    .order-payment { font-size: .9rem; color: #666; margin-top: 4px; }
+    .order-comment { margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 8px; font-size: .9rem; color: #333; }
+    .order-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .order-actions button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 500;
+    }
+    .order-actions .btn-start { background: #2196f3; color: #fff; }
+    .order-actions .btn-start:hover { background: #1976d2; }
+    .order-actions .btn-done { background: #4caf50; color: #fff; }
+    .order-actions .btn-done:hover { background: #388e3c; }
+    .order-actions button:disabled { opacity: .6; cursor: not-allowed; }
+    .staff-empty { text-align: center; padding: 48px 20px; color: #666; }
+    .staff-error { background: #ffebee; color: #c62828; padding: 12px; border-radius: 12px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="staff-page">
+    <div class="staff-header">
+      <div>
+        <h1><i class="fas fa-clipboard-list"></i> Заказы для персонала</h1>
+        <p class="staff-auto">Обновление каждые 30 сек</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <a href="index.html"><i class="fas fa-arrow-left"></i> Меню для гостей</a>
+        <div class="sound-controls">
+          <button type="button" class="sound-btn" id="btnSound" aria-label="Звуковые уведомления">
+            <i class="fas fa-volume-high"></i> Звук: выкл
+          </button>
+          <div class="sound-vol" aria-label="Громкость уведомлений">
+            <span>Громкость</span>
+            <input id="soundVolume" type="range" min="0" max="1" step="0.05" value="0.85">
+          </div>
+        </div>
+        <button type="button" class="staff-refresh" id="btnRefresh" aria-label="Обновить">
+          <i class="fas fa-sync-alt"></i> Обновить
+        </button>
+      </div>
+    </div>
+
+    <div id="staffError" class="staff-error" hidden></div>
+
+    <div class="tabs" style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border);">
+      <button class="tab-btn active" data-tab="orders" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 1rem; font-weight: 500; color: #666;">Заказы</button>
+      <button class="tab-btn" data-tab="reservations" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 1rem; font-weight: 500; color: #666;">Бронирования</button>
+    </div>
+
+    <div id="tabOrders" class="tab-content" style="display: block;">
+      <div id="ordersContainer" class="orders-list"></div>
+      <div id="ordersEmpty" class="staff-empty" hidden>
+        <p>Пока нет заказов.</p>
+        <p style="font-size: .9rem;">Новые заказы появятся здесь после оплаты на странице меню.</p>
+      </div>
+    </div>
+
+    <div id="tabReservations" class="tab-content" style="display: none;">
+      <div id="reservationsContainer" class="orders-list"></div>
+      <div id="reservationsEmpty" class="staff-empty" hidden>
+        <p>Пока нет бронирований.</p>
+        <p style="font-size: .9rem;">Новые бронирования появятся здесь после заполнения формы на странице меню.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Если страницу открыли как file://, нужен явный адрес сервера
+    const API_BASE = window.STAFF_API_BASE || 'http://localhost:3000';
+    const ORDERS_URL = API_BASE + '/api/orders';
+    const RESERVATIONS_URL = API_BASE + '/api/reservations';
+    const REFRESH_INTERVAL = 30000;
+
+    const ordersContainer = document.getElementById('ordersContainer');
+    const reservationsContainer = document.getElementById('reservationsContainer');
+    const ordersEmpty = document.getElementById('ordersEmpty');
+    const reservationsEmpty = document.getElementById('reservationsEmpty');
+    const staffError = document.getElementById('staffError');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnSound = document.getElementById('btnSound');
+    const soundVolume = document.getElementById('soundVolume');
+
+    let currentTab = 'orders';
+    let soundEnabled = false;
+    let audioCtx = null;
+
+    const knownOrderIds = new Set();
+    const knownReservationIds = new Set();
+    let initializedKnownIds = false;
+
+    function getVolume() {
+      const v = parseFloat(soundVolume && soundVolume.value);
+      if (Number.isFinite(v)) return Math.min(1, Math.max(0, v));
+      return 0.85;
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) audioCtx = new Ctx();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+
+    // Громкий сигнал: 3 коротких "пип" (без внешних файлов)
+    function playAlertBeep() {
+      if (!soundEnabled) return;
+      ensureAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const master = audioCtx.createGain();
+      master.gain.value = Math.max(0.05, getVolume()); // достаточная громкость, зависит от устройства
+      master.connect(audioCtx.destination);
+
+      const pattern = [
+        { t: 0.00, f: 880, d: 0.12 },
+        { t: 0.18, f: 880, d: 0.12 },
+        { t: 0.36, f: 988, d: 0.14 }
+      ];
+
+      pattern.forEach(p => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(p.f, now + p.t);
+        g.gain.setValueAtTime(0.0001, now + p.t);
+        g.gain.exponentialRampToValueAtTime(1.0, now + p.t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + p.t + p.d);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(now + p.t);
+        osc.stop(now + p.t + p.d + 0.02);
+      });
+    }
+
+    function updateSoundUi() {
+      if (!btnSound) return;
+      btnSound.classList.toggle('sound-on', soundEnabled);
+      btnSound.innerHTML = soundEnabled
+        ? '<i class="fas fa-volume-high"></i> Звук: вкл'
+        : '<i class="fas fa-volume-xmark"></i> Звук: выкл';
+    }
+
+    if (btnSound) {
+      btnSound.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        if (soundEnabled) ensureAudio();
+        updateSoundUi();
+        // пробный сигнал (чтобы работники убедились, что громко)
+        if (soundEnabled) playAlertBeep();
+      });
+      updateSoundUi();
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('active');
+          b.style.color = '#666';
+          b.style.borderBottomColor = 'transparent';
+        });
+        document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+        btn.classList.add('active');
+        btn.style.color = 'var(--primary)';
+        btn.style.borderBottomColor = 'var(--primary)';
+        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+        currentTab = tab;
+        if (tab === 'reservations' && reservationsContainer.children.length === 0) {
+          fetchReservations();
+        }
+      });
+    });
+
+    function showError(msg) {
+      staffError.textContent = msg;
+      staffError.hidden = false;
+    }
+    function hideError() {
+      staffError.hidden = true;
+    }
+
+    function paymentLabel(method) {
+      return { visa: 'Visa', qr: 'QR-код', cash: 'Наличные' }[method] || method;
+    }
+
+    function statusLabel(status) {
+      return {
+        new: 'Новый',
+        in_progress: 'В работе',
+        done: 'Готово',
+        pending: 'Ожидает',
+        confirmed: 'Подтверждено',
+        cancelled: 'Отменено'
+      }[status] || status;
+    }
+
+    function formatTime(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+      } catch (_) { return iso; }
+    }
+
+    async function updateOrderStatus(orderId, status) {
+      try {
+        const res = await fetch(API_BASE + '/api/orders/' + encodeURIComponent(orderId), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        if (res.ok) fetchOrders();
+      } catch (e) {
+        showError('Ошибка обновления статуса: ' + e.message);
+      }
+    }
+
+    function renderOrders(ordersList) {
+      hideError();
+      ordersContainer.innerHTML = '';
+
+      if (!ordersList || ordersList.length === 0) {
+        ordersEmpty.hidden = false;
+        return;
+      }
+      ordersEmpty.hidden = true;
+
+      ordersList.forEach(order => {
+        const card = document.createElement('div');
+        card.className = 'order-card status-' + (order.status || 'new');
+
+        const itemsHtml = (order.items || [])
+          .map(i => `<li><span>${escapeHtml(i.name)} × ${i.qty}</span><span>${(i.price * i.qty)}₽</span></li>`)
+          .join('');
+
+        card.innerHTML = `
+          <div class="order-card-header">
+            <div>
+              <span class="order-id">Заказ ${escapeHtml(order.orderId)}</span>
+              <div class="order-time">${formatTime(order.createdAt)}</div>
+            </div>
+            <span class="order-status status-${order.status || 'new'}">${statusLabel(order.status || 'new')}</span>
+          </div>
+          <div class="order-body">
+            <ul class="order-items">${itemsHtml}</ul>
+            <div class="order-total">Итого: ${order.total || 0}₽</div>
+            <div class="order-payment">Оплата: ${paymentLabel(order.paymentMethod)}</div>
+            ${(order.comment ? '<div class="order-comment"><strong>Комментарий:</strong> ' + escapeHtml(order.comment) + '</div>' : '')}
+          </div>
+          <div class="order-actions">
+            ${(order.status === 'new' ? '<button type="button" class="btn-start" data-order-id="' + escapeHtml(order.orderId) + '" data-status="in_progress">В работу</button>' : '')}
+            ${(order.status !== 'done' ? '<button type="button" class="btn-done" data-order-id="' + escapeHtml(order.orderId) + '" data-status="done">Готово</button>' : '')}
+          </div>
+        `;
+
+        card.querySelectorAll('.btn-start, .btn-done').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.orderId;
+            const status = btn.dataset.status;
+            if (id && status) updateOrderStatus(id, status);
+          });
+        });
+
+        ordersContainer.appendChild(card);
+      });
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s == null ? '' : s;
+      return div.innerHTML;
+    }
+
+    function renderReservations(reservationsList) {
+      hideError();
+      reservationsContainer.innerHTML = '';
+
+      if (!reservationsList || reservationsList.length === 0) {
+        reservationsEmpty.hidden = false;
+        return;
+      }
+      reservationsEmpty.hidden = true;
+
+      reservationsList.forEach(reservation => {
+        const card = document.createElement('div');
+        card.className = 'order-card status-' + (reservation.status === 'confirmed' ? 'done' : reservation.status === 'cancelled' ? 'done' : 'new');
+
+        card.innerHTML = `
+          <div class="order-card-header">
+            <div>
+              <span class="order-id">Бронь ${escapeHtml(reservation.reservationId)}</span>
+              <div class="order-time">${formatTime(reservation.createdAt)}</div>
+            </div>
+            <span class="order-status status-${reservation.status || 'pending'}">${statusLabel(reservation.status || 'pending')}</span>
+          </div>
+          <div class="order-body">
+            <ul class="order-items" style="list-style: none; margin: 0; padding: 0;">
+              <li style="padding: 6px 0; display: flex; justify-content: space-between;"><strong>Имя:</strong> <span>${escapeHtml(reservation.name)}</span></li>
+              <li style="padding: 6px 0; display: flex; justify-content: space-between;"><strong>Телефон:</strong> <span>${escapeHtml(reservation.phone)}</span></li>
+              <li style="padding: 6px 0; display: flex; justify-content: space-between;"><strong>Дата:</strong> <span>${escapeHtml(reservation.date)}</span></li>
+              <li style="padding: 6px 0; display: flex; justify-content: space-between;"><strong>Время:</strong> <span>${escapeHtml(reservation.time)}</span></li>
+              <li style="padding: 6px 0; display: flex; justify-content: space-between;"><strong>Гостей:</strong> <span>${reservation.guests || 2}</span></li>
+            </ul>
+            ${(reservation.comment ? '<div class="order-comment"><strong>Пожелания:</strong> ' + escapeHtml(reservation.comment) + '</div>' : '')}
+          </div>
+        `;
+
+        reservationsContainer.appendChild(card);
+      });
+    }
+
+    async function fetchOrders() {
+      btnRefresh.disabled = true;
+      try {
+        const res = await fetch(ORDERS_URL);
+        if (!res.ok) throw new Error('Сервер вернул ' + res.status);
+        const data = await res.json();
+        const list = data.orders || [];
+        if (!initializedKnownIds) {
+          list.forEach(o => o && o.orderId && knownOrderIds.add(o.orderId));
+        } else {
+          const hasNew = list.some(o => o && o.orderId && !knownOrderIds.has(o.orderId));
+          list.forEach(o => o && o.orderId && knownOrderIds.add(o.orderId));
+          if (hasNew) playAlertBeep();
+        }
+        renderOrders(list);
+      } catch (e) {
+        showError('Не удалось загрузить заказы. Убедитесь, что сервер запущен (npm start в папке server). ' + e.message);
+        renderOrders([]);
+      }
+      btnRefresh.disabled = false;
+    }
+
+    async function fetchReservations() {
+      try {
+        const res = await fetch(RESERVATIONS_URL);
+        if (!res.ok) throw new Error('Сервер вернул ' + res.status);
+        const data = await res.json();
+        const list = data.reservations || [];
+        if (!initializedKnownIds) {
+          list.forEach(r => r && r.reservationId && knownReservationIds.add(r.reservationId));
+        } else {
+          const hasNew = list.some(r => r && r.reservationId && !knownReservationIds.has(r.reservationId));
+          list.forEach(r => r && r.reservationId && knownReservationIds.add(r.reservationId));
+          if (hasNew) playAlertBeep();
+        }
+        renderReservations(list);
+      } catch (e) {
+        showError('Не удалось загрузить бронирования. ' + e.message);
+        renderReservations([]);
+      }
+    }
+
+    function fetchAll() {
+      fetchOrders();
+      if (currentTab === 'reservations') {
+        fetchReservations();
+      }
+      initializedKnownIds = true;
+    }
+
+    btnRefresh.addEventListener('click', fetchAll);
+    fetchAll();
+    setInterval(fetchAll, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>

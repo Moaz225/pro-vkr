@@ -1,0 +1,1 @@
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'brodsky'; DROP DATABASE IF EXISTS brodsky; CREATE DATABASE brodsky ENCODING 'UTF8' LC_COLLATE 'Russian_Russia.1251' LC_CTYPE 'Russian_Russia.1251' TEMPLATE template0;

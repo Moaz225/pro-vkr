@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BRODSKY. - Меню</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Auth overlay -->
+  <div id="authOverlay" class="auth-overlay" hidden>
+    <div class="auth-card">
+      <h2 class="auth-title">Добро пожаловать в BRODSKY.</h2>
+      <p class="auth-subtitle">Выберите, как хотите продолжить:</p>
+      <div class="auth-modes">
+        <button type="button" id="btnAuthLogin" class="btn-primary auth-mode-btn">
+          <i class="fas fa-right-to-bracket"></i> Войти
+        </button>
+        <button type="button" id="btnAuthRegister" class="btn-secondary auth-mode-btn">
+          <i class="fas fa-user-plus"></i> Регистрация
+        </button>
+        <button type="button" id="btnAuthGuest" class="btn-ghost">
+          Продолжить как гость
+        </button>
+      </div>
+      <form id="authForm" class="auth-form" hidden>
+        <div class="form-field">
+          <label for="authName" id="authNameLabel">Имя</label>
+          <input type="text" id="authName" placeholder="Например: Анна" autocomplete="name">
+        </div>
+        <div class="form-field">
+          <label for="authEmail">Email</label>
+          <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-field">
+          <label for="authPassword">Пароль</label>
+          <input type="password" id="authPassword" placeholder="Минимум 6 символов" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-primary" id="authSubmitBtn">
+          Продолжить
+        </button>
+        <p class="auth-error" id="authError" hidden></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="hero">
+      <h1 class="logo">BRODSKY<span class="dot">.</span></h1>
+      <div class="logo-divider"></div>
+    </div>
+    <div class="header-actions">
+      <button id="openReservation" class="btn-reservation-fixed" type="button" aria-label="Забронировать столик">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Бронь столика</span>
+      </button>
+      <button type="button" id="changeUserBtn" class="btn-ghost-small">
+        Сменить пользователя
+      </button>
+    </div>
+  </header>
+
+  <!-- Categories + Search -->
+  <div class="container">
+    <div class="search-container">
+      <input type="search" id="searchInput" placeholder="Поиск напитков и блюд…">
+      <i class="fas fa-search" aria-hidden="true"></i>
+    </div>
+  </div>
+
+  <div class="categories">
+    <!-- Главные разделы -->
+    <button class="category-btn active" data-target="coffee">Кофе</button>
+    <button class="category-btn" data-target="seasonal">Сезонные напитки</button>
+    <button class="category-btn" data-target="tea">Чай</button>
+    <button class="category-btn" data-target="cocoa">Какао</button>
+    <button class="category-btn" data-target="fresh">Свежие соки</button>
+    <button class="category-btn" data-target="meals">Блюда</button>
+
+    <span class="divider" aria-hidden="true"></span>
+
+    <!-- Подразделы «Блюда» -->
+    <button class="category-btn" data-target="meals-breakfasts">Завтраки до 14:00</button>
+    <button class="category-btn" data-target="meals-soups">Супы</button>
+    <button class="category-btn" data-target="meals-pancakes">Блины</button>
+    <button class="category-btn" data-target="meals-curd">Творог и сырники</button>
+    <button class="category-btn" data-target="meals-toasts">Тосты и хлеб</button>
+    <button class="category-btn" data-target="meals-salads">Салаты</button>
+    <button class="category-btn" data-target="meals-pasta">Паста</button>
+    <button class="category-btn" data-target="meals-pizza">Пицца</button>
+    <button class="category-btn" data-target="meals-desserts">Десерты</button>
+  </div>
+
+  <div class="container">
+    <!-- ===== Кофе ===== -->
+    <section id="coffee" class="menu-section active">
+      <div class="section-title"><h2>Кофе</h2></div>
+      <div class="menu-grid">
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Эспрессо</span><span class="item-price">200₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Эспрессо — 40 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Американо</span><span class="item-price">200₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Американо — 200 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Фильтр-кофе</span><span class="item-price">250₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Фильтр-кофе — 250 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Харио V60</span><span class="item-price">280₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Харио V60 — 250 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Капучино</span><span class="item-price">230/260₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Капучино — 200/300 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Латте</span><span class="item-price">260₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Латте — 300 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Флэт уайт</span><span class="item-price">260₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Флэт уайт — 200 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Раф</span><span class="item-price">300₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Раф цитрус/ваниль — 300 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Маття</span><span class="item-price">300₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Маття — 300 мл</span></div></div>
+        </div>
+        <div class="menu-card">
+          <div class="card-header"><span class="item-name">Растительное молоко</span><span class="item-price">90₽</span></div>
+          <div class="card-body"><div class="item-description"><span class="ru-name">Кокос/миндаль/фундук — +90₽</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Сезонные напитки ===== -->
+    <section id="seasonal" class="menu-section">
+      <div class="section-title"><h2>Сезонные напитки</h2></div>
+      <div class="menu-grid">
+        <div class="menu-card"><div class="card-header"><span class="item-name">Айс капучино</span><span class="item-price">260₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Айс латте</span><span class="item-price">260₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Айс какао</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Айс маття</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Айс ти</span><span class="item-price">260₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Эспрессо-тоник</span><span class="item-price">350₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Бамбл</span><span class="item-price">350₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div><p>(апельсин / гранат / вишня)</p></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Тропическая матча</span><span class="item-price">330₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Кофейная содовая</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Лимонад</span><span class="item-price">290₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div><p>(смородина / малина-базилик / облепиха-маракуйя)</p></div></div>
+      </div>
+    </section>
+
+    <!-- ===== Чай ===== -->
+    <section id="tea" class="menu-section">
+      <div class="section-title"><h2>Чай</h2></div>
+      <div class="menu-grid">
+        <div class="menu-card"><div class="card-header"><span class="item-name">Черный чай</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">500 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Зеленый чай</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">500 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Улун</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">500 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Иван-чай</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">500 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Гречишный чай</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">500 мл</span></div></div></div>
+      </div>
+    </section>
+
+    <!-- ===== Какао ===== -->
+    <section id="cocoa" class="menu-section">
+      <div class="section-title"><h2>Какао</h2></div>
+      <div class="menu-grid">
+        <div class="menu-card"><div class="card-header"><span class="item-name">Какао c зефирками</span><span class="item-price">270₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Specialty «UNICAVA»</span><span class="item-price">300₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">200 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Горячий шоколад</span><span class="item-price">270₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">200 мл</span></div></div></div>
+      </div>
+    </section>
+
+    <!-- ===== Свежие соки ===== -->
+    <section id="fresh" class="menu-section">
+      <div class="section-title"><h2>Свежие соки</h2></div>
+      <div class="menu-grid">
+        <div class="menu-card"><div class="card-header"><span class="item-name">Апельсиновый сок</span><span class="item-price">350₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+        <div class="menu-card"><div class="card-header"><span class="item-name">Грейпфрутовый сок</span><span class="item-price">350₽</span></div><div class="card-body"><div class="item-description"><span class="ru-name">300 мл</span></div></div></div>
+      </div>
+    </section>
+
+    <!-- ===== Блюда ===== -->
+    <section id="meals" class="menu-section">
+      <div class="section-title"><h2>Блюда</h2></div>
+
+      <div class="meals-grid">
+        <!-- Завтраки -->
+        <div class="meal-category" id="meals-breakfasts">
+          <div class="meal-category-title">Завтраки до 14:00</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Рисовая каша<span class="meal-price">170₽</span></div><div class="meal-description">Альтернативное молоко: кокос/миндаль/фундук +90₽</div></div>
+            <div class="meal-item"><div class="meal-name">Овсяная каша<span class="meal-price">170₽</span></div><div class="meal-description">Альтернативное молоко: кокос/миндаль/фундук +90₽</div></div>
+            <div class="meal-item"><div class="meal-name">Гречневая с пармезаном<span class="meal-price">260₽</span></div></div>
+            <div class="meal-item"><div class="meal-name">Рисовая каша с манго<span class="meal-price">260₽</span></div><div class="meal-description">На кокосовом молоке</div></div>
+            <div class="meal-item"><div class="meal-name">Сырники со сметаной<span class="meal-price">270₽</span></div><div class="meal-description">Варенье/сгущенка/соленая карамель +80₽</div></div>
+            <div class="meal-item"><div class="meal-name">Сырники<span class="meal-price">300₽</span></div><div class="meal-description">с манговым курдом и крем-сыром</div></div>
+            <div class="meal-item"><div class="meal-name">Творожная запеканка<span class="meal-price">300₽</span></div><div class="meal-description">с мороженым и ягодным соусом</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">300₽</span></div><div class="meal-description">С курицей и грибами</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">250₽</span></div><div class="meal-description">С креветками в свит чили</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">250₽</span></div><div class="meal-description">С форелью слабосоленой</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">250₽</span></div><div class="meal-description">Со сметаной и вареньем: малина, черника, смородина, ягодный соус</div></div>
+            <div class="meal-item"><div class="meal-name">Самый сытный завтрак<span class="meal-price">450₽</span></div><div class="meal-description">Австрийская колбаска, бекон, картофель беби, яйцо всмятку, маринованные огурцы, соус трюфельный ранч, чиабатта, салат</div></div>
+            <div class="meal-item"><div class="meal-name">Английский завтрак<span class="meal-price">300₽</span></div><div class="meal-description">Микс салата, овощи, глазунья, колбаска австрийская, фасоль в томатном соусе, чиабатта</div></div>
+            <div class="meal-item"><div class="meal-name">Омлет четыре сыра<span class="meal-price">300₽</span></div><div class="meal-description">Чеддер, моцарелла, крем-сыр, пармезан, микс салата, овощи, чиабатта</div></div>
+            <div class="meal-item"><div class="meal-name">Бенедикт с форелью<span class="meal-price">490₽</span></div><div class="meal-description">Бриошь, крем-сыр, форель, авокадо, яйцо пашот, микс салата, сырный соус</div></div>
+            <div class="meal-item"><div class="meal-name">Бенедикт с креветками<span class="meal-price">490₽</span></div><div class="meal-description">Бриошь, крем-сыр, креветки, авокадо, яйцо пашот, микс салата, сырный соус</div></div>
+            <div class="meal-item">
+              <div class="meal-name">Завтрак конструктор<span class="meal-price">220₽</span></div>
+              <div class="meal-description" style="color:#ff7700;font-weight:500">
+                Скрембл, омлет, пашот или глазунья из двух яиц. Подаем с миксом салата и чиабаттой.
+              </div>
+              <div class="meal-description">
+                <strong>Добавки:</strong><br>
+                Курица/Бекон — 120₽<br>
+                Авокадо — 120₽<br>
+                Креветки в свит чили — 150₽<br>
+                Форель слабосоленая — 250₽<br>
+                Колбаска австрийская — 120₽<br>
+                Чиабатта — 60₽<br>
+                Сливочное масло — 70₽<br>
+                Яйцо — 60₽<br>
+                Фасоль в томатном соусе — 80₽
+              </div>
+            </div>
+            <div class="meal-item">
+              <div class="meal-name">Напитки к завтраку<span class="meal-price">150₽</span></div>
+              <div class="meal-description">
+                Фильтр-кофе, Американо, Капучино, Латте, Флэт уайт, Какао, Чай
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Творог и сырники -->
+        <div class="meal-category" id="meals-curd">
+          <div class="meal-category-title">Творог и сырники</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Творожная запеканка<span class="meal-price">370₽</span></div><div class="meal-description">с мороженым и ягодным соусом</div></div>
+            <div class="meal-item"><div class="meal-name">Сырники со сметаной<span class="meal-price">270₽</span></div><div class="meal-description">Варенье/сгущенка/соленая карамель +80₽</div></div>
+            <div class="meal-item"><div class="meal-name">Сырники<span class="meal-price">300₽</span></div><div class="meal-description">с манговым курдом и крем-сыром</div></div>
+          </div>
+        </div>
+
+        <!-- Блины -->
+        <div class="meal-category" id="meals-pancakes">
+          <div class="meal-category-title">Блины</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">300₽</span></div><div class="meal-description">С курицей и грибами</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">350₽</span></div><div class="meal-description">С форелью и авокадо-кремом</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">250₽</span></div><div class="meal-description">С креветками в свит чили</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">250₽</span></div><div class="meal-description">С форелью слабосоленой</div></div>
+            <div class="meal-item"><div class="meal-name">Блины<span class="meal-price">250₽</span></div><div class="meal-description">Со сметаной и вареньем: малина, черника, смородина, ягодный соус</div></div>
+          </div>
+        </div>
+
+        <!-- Тосты и хлеб -->
+        <div class="meal-category" id="meals-toasts">
+          <div class="meal-category-title">Тосты и хлеб</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Бенедикт с форелью<span class="meal-price">490₽</span></div><div class="meal-description">Бриошь, крем-сыр, форель, авокадо, яйцо пашот, микс салата, сырный соус</div></div>
+            <div class="meal-item"><div class="meal-name">Бенедикт с креветками<span class="meal-price">490₽</span></div><div class="meal-description">Бриошь, крем-сыр, креветки, авокадо, яйцо пашот, микс салата, сырный соус</div></div>
+            <div class="meal-item"><div class="meal-name">Хот-дог «Нью-Йорк»<span class="meal-price">270₽</span></div><div class="meal-description">Соус чипотле, колбаска австрийская, лук фри, маринованные огурцы, лук карамельный</div></div>
+            <div class="meal-item"><div class="meal-name">Тост с креветками<span class="meal-price">350₽</span></div><div class="meal-description">Чиабатта, крем-сыр, микс салата, яйцо пашот, соус голландский, креветки</div></div>
+            <div class="meal-item"><div class="meal-name">Тост с форелью<span class="meal-price">430₽</span></div><div class="meal-description">Чиабатта, авокадо-крем, слабосоленая форель, свежий огурец</div></div>
+            <div class="meal-item"><div class="meal-name">Клаб-сэндвич<span class="meal-price">370₽</span></div><div class="meal-description">Чиабатта, чеддер, микс салата, курица BBQ, вяленые томаты, сырный чили</div></div>
+          </div>
+        </div>
+
+        <!-- Салаты -->
+        <div class="meal-category" id="meals-salads">
+          <div class="meal-category-title">Салаты</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Цезарь с курицей<span class="meal-price">350₽</span></div><div class="meal-description">Микс салата, жареная курица, сухарики, томаты черри, яйцо, пармезан, соус цезарь</div></div>
+            <div class="meal-item"><div class="meal-name">Цезарь с креветками<span class="meal-price">390₽</span></div><div class="meal-description">Микс салата, креветки, сухарики, томаты черри, яйцо, пармезан, соус цезарь</div></div>
+          </div>
+        </div>
+
+        <!-- Паста -->
+        <div class="meal-category" id="meals-pasta">
+          <div class="meal-category-title">Паста</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Фетучини с креветками<span class="meal-price">410₽</span></div><div class="meal-description">Фетучини, креветки, шпинат, чеснок, сливочный соус, пармезан</div></div>
+            <div class="meal-item"><div class="meal-name">Фетучини с курицей<span class="meal-price">370₽</span></div><div class="meal-description">Курица, грибы, сливочный соус, пармезан</div></div>
+            <div class="meal-item"><div class="meal-name">Фетучини с беконом<span class="meal-price">410₽</span></div><div class="meal-description">Бекон, грибы, томаты черри, песто, сливочный соус, яйцо пашот, пармезан</div></div>
+            <div class="meal-item"><div class="meal-name">Томатная паста<span class="meal-price">370₽</span></div><div class="meal-description">Томатный соус, томаты черри, печёный перец, страчателла, песто</div></div>
+          </div>
+        </div>
+
+        <!-- Пицца -->
+        <div class="meal-category" id="meals-pizza">
+          <div class="meal-category-title">Пицца</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Маргарита 360 г<span class="meal-price">439₽</span></div><div class="meal-description">Римское тесто, моцарелла, томаты черри, песто, томатный соус, пармезан</div></div>
+            <div class="meal-item"><div class="meal-name">Мясная 380 г<span class="meal-price">439₽</span></div><div class="meal-description">Римское тесто, моцарелла, томаты черри, пепперони, курица, бекон</div></div>
+            <div class="meal-item"><div class="meal-name">Пепперони 360 г<span class="meal-price">439₽</span></div><div class="meal-description">Римское тесто, моцарелла, томатный соус, пепперони</div></div>
+            <div class="meal-item"><div class="meal-name">Сырная 350 г<span class="meal-price">469₽</span></div><div class="meal-description">Римское тесто, белый соус, моцарелла, чеддер, пармезан, дор блю</div></div>
+          </div>
+        </div>
+
+        <!-- Супы -->
+        <div class="meal-category" id="meals-soups">
+          <div class="meal-category-title">Супы</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Сырный крем-суп<span class="meal-price">370₽</span></div><div class="meal-description">Овощной бульон, сливочный сыр, сухари</div></div>
+            <div class="meal-item"><div class="meal-name">Тыквенный крем-суп<span class="meal-price">330₽</span></div><div class="meal-description">Тыква, лук, кокосовое молоко</div></div>
+            <div class="meal-item"><div class="meal-name">Грибной крем-суп<span class="meal-price">350₽</span></div><div class="meal-description">Шампиньоны, лук, сливки, сухари</div></div>
+          </div>
+        </div>
+
+        <!-- Десерты -->
+        <div class="meal-category" id="meals-desserts">
+          <div class="meal-category-title">Десерты</div>
+          <div class="meal-items">
+            <div class="meal-item"><div class="meal-name">Три молока<span class="meal-price">300₽</span></div><div class="meal-description">Фирменный десерт и фаворит среди наших гостей. Воздушный классический бисквит, пропитанный тремя видами молока.</div></div>
+            <div class="meal-item"><div class="meal-name">Торт медовый с облепихой<span class="meal-price">300₽</span></div></div>
+            <div class="meal-item"><div class="meal-name">Морковный торт<span class="meal-price">270₽</span></div></div>
+            <div class="meal-item"><div class="meal-name">Торт грушевый 'Ларри'<span class="meal-price">270₽</span></div></div>
+            <div class="meal-item"><div class="meal-name">Пирог шоколадный безглютеновый<span class="meal-price">360₽</span></div></div>
+            <div class="meal-item"><div class="meal-name">Чизкейк карамельный<span class="meal-price">290₽</span></div></div>
+            <div class="meal-item"><div class="meal-name">Чизкейк баскский фисташка<span class="meal-price">300₽</span></div></div>
+            <div class="meal-item"><div class="meal-name">Чизкейк баскский классический<span class="meal-price">270₽</span></div><div class="meal-description">Классический баскский чизкейк, готовится при высоких температурах, за счёт чего имеет нежную кремовую текстуру.</div></div>
+            <div class="meal-item"><div class="meal-name">Пирожное 'амберри 2.0'<span class="meal-price">270₽</span></div><div class="meal-description">Йогуртовое пирожное на песочной основе с прослойкой из клубничного аюре с добавлением свежей клубники и мяты.</div></div>
+            <div class="meal-item"><div class="meal-name">Меренговый рулет<span class="meal-price">250₽</span></div><div class="meal-description">Очень нежный кисло-сладкий десерт с начинкой из черной смородины и сливочного крема.</div></div>
+            <div class="meal-item"><div class="meal-name">Тарт лимонный<span class="meal-price">270₽</span></div><div class="meal-description">Лимонный тарт — яркое сочетание лимонного курда, сливочного крема и малинового конфи. Хорошо подходит для тех, кто любит сочетание кислого и сладкого в десертах.</div></div>
+            <div class="meal-item"><div class="meal-name">Тарталетка с пеканом<span class="meal-price">220₽</span></div><div class="meal-description">Шоколадно-ореховая тарталетка с пеканом, сливочным кремом и молочным шоколадом.</div></div>
+            <div class="meal-item"><div class="meal-name">Веганский банановый хлеб<span class="meal-price">150₽</span></div><div class="meal-description">Мягкий банановый десерт без яиц и лактозы, на основе свежих бананов и фундучного молока. Можно добавить мороженое, а сам десерт подогреть</div></div>
+            <div class="meal-item"><div class="meal-name">Эклер 'черри-йогурт' (с вишней)<span class="meal-price">220₽</span></div><div class="meal-description">Эклер с вишней — яркое сочетание вишнёвого йогуртового крема с яркой вишнёвой начинкой, украшается белым шоколадом, фисташкой и сублимированными ягодами</div></div>
+            <div class="meal-item"><div class="meal-name">Эклер арахис-карамель<span class="meal-price">220₽</span></div><div class="meal-description">Сладкий карамельно-ореховый эклер, внутри которого творожный крем с соленой карамелью и арахисовой пастой. Украшается молочным шоколадом и дробленым арахисом</div></div>
+            <div class="meal-item"><div class="meal-name">Эклер 'пинки-пай' (банан-лаванда)<span class="meal-price">220₽</span></div><div class="meal-description">Эклер с кремом, в котором сочетается яркий вкус банана с легким ароматом лаванды. Украшается белым шоколадом и ягодами голубики. Для крема сливки ароматизируются цветками сушеной лаванды</div></div>
+            <div class="meal-item"><div class="meal-name">Паштель де ната<span class="meal-price">110₽</span></div><div class="meal-description">Португальский десерт – слоеная корзинка с заварным кремом с добавлением цедры лимона и корицы</div></div>
+            <div class="meal-item"><div class="meal-name">Муравейник с грецким орехом<span class="meal-price">180₽</span></div><div class="meal-description">Мини-вариация классического пирожного муравейник на основе самодельного печенья, масляного крема с вареной сгущенкой и жареных грецких орехов</div></div>
+            <div class="meal-item"><div class="meal-name">Птичье молоко классическое<span class="meal-price">120₽</span></div><div class="meal-description">Нежнейшее суфле с мягко-сливочным вкусом в обсыпке из какао</div></div>
+            <div class="meal-item"><div class="meal-name">Печенье песочное с шоколадом<span class="meal-price">120₽</span></div><div class="meal-description">Классическое американское печенье с темным шоколадом</div></div>
+            <div class="meal-item"><div class="meal-name">Печенье 3 шоколада<span class="meal-price">120₽</span></div><div class="meal-description">Супер шоколадное печенье, мягкое внутри и слегка хрустящее снаружи</div></div>
+            <div class="meal-item"><div class="meal-name">Печенье веганское<span class="meal-price">80₽</span></div><div class="meal-description">Мягкое ореховое печенье без добавления яиц, белого сахара и пшеничной муки</div></div>
+            <div class="meal-item"><div class="meal-name">Булочка с корицей<span class="meal-price">200₽</span></div><div class="meal-description">Классическая булочка с корицей и крем-чизом, украшена карамелью и орехами</div></div>
+            <div class="meal-item"><div class="meal-name">Булочка с маком<span class="meal-price">220₽</span></div><div class="meal-description">Мягкая дрожжевая булочка с начинкой из мака и заварного крема</div></div>
+            <div class="meal-item"><div class="meal-name">Булочка с яблоком<span class="meal-price">180₽</span></div><div class="meal-description">Слоёное тесто с начинкой из зелёного яблока, мёда и корицы</div></div>
+            <div class="meal-item"><div class="meal-name">Лимонный краффин<span class="meal-price">150₽</span></div><div class="meal-description">Десерт с кремом на основе лимонного сока, украшен сушёным лимоном</div></div>
+            <div class="meal-item"><div class="meal-name">Слойка со свежими ягодами<span class="meal-price">350₽</span></div><div class="meal-description">Десерт с кремом и свежими ягодами, украшен сублимированными ягодами</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== Бронирование столика (модальное окно) ===== -->
+  <section id="reservation" class="reservation-section" hidden>
+    <div class="reservation-backdrop" data-close-reservation="true"></div>
+    <div class="reservation-modal">
+      <button class="modal-close" id="reservationClose" type="button" aria-label="Закрыть бронирование">&times;</button>
+      <div class="reservation-card">
+        <div class="reservation-info">
+          <h2>Бронирование столика</h2>
+          <p>
+            Заполните форму, и мы свяжемся с вами для подтверждения брони.
+            Бронирование не является окончательным без подтверждения администратора.
+          </p>
+        </div>
+        <form class="reservation-form" id="reservationForm">
+          <div class="form-row">
+            <div class="form-field">
+              <label for="resName">Имя</label>
+              <input type="text" id="resName" name="name" placeholder="Как к вам обращаться" required>
+            </div>
+            <div class="form-field">
+              <label for="resPhone">Телефон</label>
+              <input type="tel" id="resPhone" name="phone" placeholder="+7 (___) ___-__-__" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="resDate">Дата</label>
+              <input type="date" id="resDate" name="date" required>
+            </div>
+            <div class="form-field">
+              <label for="resTime">Время</label>
+              <input type="time" id="resTime" name="time" required>
+            </div>
+            <div class="form-field">
+              <label for="resGuests">Гостей</label>
+              <input type="number" id="resGuests" name="guests" min="1" max="12" value="2" required>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="resComment">Пожелания</label>
+            <textarea id="resComment" name="comment" rows="3" placeholder="Например: тихий столик у окна"></textarea>
+          </div>
+          <button type="submit" class="btn-primary">Забронировать</button>
+          <p class="reservation-note">Нажимая на кнопку, вы соглашаетесь с обработкой персональных данных.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Информация о выбранном продукте (модальное окно) ===== -->
+  <section id="productInfo" class="product-info-section" hidden>
+    <div class="product-info-backdrop" data-close-product="true"></div>
+    <div class="product-info-card">
+      <button class="modal-close" id="productInfoClose" type="button" aria-label="Закрыть информацию о продукте">&times;</button>
+      <div class="product-info-image-wrap">
+        <img id="productInfoImage" class="product-info-image" src="" alt="Изображение продукта">
+      </div>
+      <div class="product-info-text">
+        <h2 id="productInfoName"></h2>
+        <p id="productInfoDescription" class="product-info-description"></p>
+        <p class="product-info-meta">
+          <strong>Калории:</strong>
+          <span id="productInfoCalories"></span>
+        </p>
+        <p class="product-info-meta">
+          <strong>Состав:</strong>
+          <span id="productInfoIngredients"></span>
+        </p>
+        <div class="product-info-actions">
+          <span class="product-info-price" id="productInfoPrice"></span>
+          <div class="product-info-qty-wrap">
+            <label for="productInfoQty">Кол-во:</label>
+            <input type="number" id="productInfoQty" min="1" value="1" aria-label="Количество">
+          </div>
+          <button type="button" class="btn-primary" id="productInfoAddToCart">
+            <i class="fas fa-cart-plus"></i> Добавить в корзину
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Корзина: кнопка и панель -->
+  <button id="cartFab" class="cart-fab" aria-label="Корзина" hidden>
+    <i class="fas fa-shopping-basket"></i>
+    <span class="cart-fab-badge" id="cartFabBadge">0</span>
+  </button>
+  <aside id="cartDrawer" class="cart-drawer" hidden aria-label="Корзина: содержимое заказа">
+    <div class="cart-drawer-header">
+      <h3>Корзина</h3>
+      <button type="button" class="modal-close cart-drawer-close" id="cartDrawerClose" aria-label="Закрыть корзину">
+        <span class="cart-drawer-close-text">Закрыть</span>
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="cart-drawer-body">
+      <ul id="cartList" class="cart-list"></ul>
+      <div class="cart-drawer-footer">
+        <div class="cart-total"><strong>Итого:</strong> <span id="cartTotalSum">0₽</span></div>
+        <p class="cart-drawer-hint">Закончили добавлять позиции?</p>
+        <button type="button" class="btn-secondary btn-cart-continue" id="btnCartContinue">
+          Продолжить выбор
+        </button>
+        <button type="button" class="btn-primary btn-checkout" id="btnCheckout">
+          <i class="fas fa-credit-card"></i> Заказ готов — к оплате
+        </button>
+      </div>
+    </div>
+  </aside>
+  <div id="cartBackdrop" class="cart-backdrop" hidden data-close-cart="true"></div>
+
+  <!-- Оформление заказа: оплата -->
+  <section id="checkoutModal" class="checkout-modal" hidden>
+    <div class="checkout-backdrop" data-close-checkout="true"></div>
+    <div class="checkout-box">
+      <button type="button" class="modal-close" id="checkoutClose" aria-label="Закрыть">&times;</button>
+      <h2>Оплата заказа</h2>
+      <div class="checkout-summary" id="checkoutSummary"></div>
+      <p class="checkout-total-row">Итого: <strong id="checkoutTotal">0₽</strong></p>
+      <div class="checkout-comment-wrap">
+        <label for="tableNumber">Номер столика</label>
+        <input id="tableNumber" name="tableNumber" type="text" inputmode="numeric" autocomplete="off" placeholder="Например: 5 или A3">
+        <div class="checkout-field-hint">Если вы за столиком — укажите номер. Если на вынос — можно оставить пустым.</div>
+      </div>
+      <div class="checkout-comment-wrap">
+        <label for="orderComment">Комментарий к заказу</label>
+        <textarea id="orderComment" name="orderComment" rows="3" placeholder="Например: без льда, на вынос, аллергия на орехи…"></textarea>
+      </div>
+      <fieldset class="payment-methods">
+        <legend>Способ оплаты</legend>
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="visa" checked>
+          <span class="payment-option-label"><i class="fab fa-cc-visa"></i> Карта Visa</span>
+        </label>
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="qr">
+          <span class="payment-option-label"><i class="fas fa-qrcode"></i> QR-код</span>
+        </label>
+        <label class="payment-option">
+          <input type="radio" name="paymentMethod" value="cash">
+          <span class="payment-option-label"><i class="fas fa-money-bill-wave"></i> Наличные</span>
+        </label>
+      </fieldset>
+      <button type="button" class="btn-primary btn-pay" id="btnPay">
+        <i class="fas fa-lock"></i> Оплатить
+      </button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-overlay"></div>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>BRODSKY.</h3>
+          <p style="color: #ccc; font-size: 0.95rem; line-height: 1.6; max-width: 350px;">
+            Сеть спешелти-кофеен из Екатеринбурга. Мы меняем культуру потребления кофе: показываем, насколько богатым и многогранным может быть натуральный вкус качественного зерна. Без сиропов, без компромиссов — только тщательно отобранные лоты и продуманные рецептуры.
+          </p>
+          <p style="color: #ccc; font-size: 0.95rem; line-height: 1.6; max-width: 350px; margin-top: 15px;">
+            Наши две кофейни — это особые пространства с уникальной атмосферой, где каждая деталь создана для вдохновения.
+          </p>
+          <div class="social-icons">
+            <a href="https://t.me/brodsky_coffee"><i class="fab fa-telegram"></i></a>
+            <a href="https://vk.com/coffee_brodsky"><i class="fab fa-vk"></i></a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h3 style="color: #ff7700;">Часы работы</h3>
+          <p style="color: #ccc;">Понедельник – Пятница: 8:00 – 21:00</p>
+          <p style="color: #ccc;">Суббота – Воскресенье: 9:00 – 21:00</p>
+        </div>
+
+        <div class="footer-section">
+          <h3 style="color: #ff7700;">Контакты</h3>
+          <div class="contact-info" style="color: #ccc; font-size: 0.95rem; line-height: 1.8;">
+            <p><i class="fas fa-map-marker-alt" style="margin-right: 8px; color: #ff7700;"></i>Первомайская 90</p>
+            <p><i class="fas fa-phone" style="margin-right: 8px; color: #ff7700;"></i>+79667057810</p>
+            <p><i class="fas fa-envelope" style="margin-right: 8px; color: #ff7700;"></i>Sbrodskyteam@gmail.com</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="copyright">
+        <p>&copy; 2023 BRODSKY. Все права защищены.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Кнопка «наверх» -->
+  <button id="toTop" aria-label="Top"><i class="fa-solid fa-arrow-up"></i></button>
+
+  <script src="script.js"></script>
+</body>
+</html>
