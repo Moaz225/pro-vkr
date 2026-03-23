@@ -1,0 +1,44 @@
+[
+  {
+    "reservationId": "RES-20260219-020634-1",
+    "name": "Абдалла Моаз Ваел",
+    "phone": "+79827169771",
+    "date": "2026-02-11",
+    "time": "18:00",
+    "guests": 2,
+    "createdAt": "2026-02-18T21:06:34.808Z",
+    "status": "confirmed"
+  },
+  {
+    "reservationId": "RES-20260219-023358-2",
+    "name": "Абдалла Моаз Ваел",
+    "phone": "+79827169771",
+    "date": "2026-11-02",
+    "time": "18:00",
+    "guests": 2,
+    "comment": "hello",
+    "createdAt": "2026-02-18T21:33:58.801Z",
+    "status": "confirmed"
+  },
+  {
+    "reservationId": "RES-20260310-221613-3",
+    "name": "Абдалла Абдалла",
+    "phone": "+79827169281",
+    "date": "0006-06-08",
+    "time": "12:22",
+    "guests": 2,
+    "createdAt": "2026-03-10T17:16:13.032Z",
+    "status": "confirmed"
+  },
+  {
+    "reservationId": "RES-20260311-143322-4",
+    "name": "Абдалла Абдалла",
+    "phone": "+79827169281",
+    "date": "2016-04-04",
+    "time": "05:22",
+    "guests": 2,
+    "comment": "kofbmofkmn",
+    "createdAt": "2026-03-11T09:33:22.251Z",
+    "status": "confirmed"
+  }
+]

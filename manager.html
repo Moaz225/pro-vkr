@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BRODSKY. — Панель менеджера</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #f0f0f0; padding: 20px; }
+    .manager-page { max-width: 1400px; margin: 0 auto; }
+    .manager-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .manager-header h1 { color: var(--primary); font-size: 1.75rem; margin: 0; }
+    .manager-header a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .manager-header a:hover { text-decoration: underline; }
+    .manager-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      font-size: .95rem;
+      transition: var(--transition);
+    }
+    .manager-refresh:hover { background: var(--primary-dark); }
+    .manager-auto { font-size: .85rem; color: #666; margin-top: 4px; }
+    .sound-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .sound-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      font-size: .95rem;
+      transition: var(--transition);
+    }
+    .sound-btn.sound-on { background: #2e7d32; }
+    .sound-btn:hover { filter: brightness(1.05); }
+    .sound-vol {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .9rem;
+      color: #444;
+      background: #fff;
+      padding: 8px 12px;
+      border-radius: var(--radius-pill);
+      box-shadow: var(--shadow-sm);
+    }
+    .sound-vol input[type="range"] { width: 120px; }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--light);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      border-left: 4px solid var(--primary);
+    }
+    .stat-card h3 {
+      font-size: .9rem;
+      color: #666;
+      margin: 0 0 8px 0;
+      font-weight: 500;
+    }
+    .stat-card .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .stat-card.payment-visa { border-left-color: #0066cc; }
+    .stat-card.payment-qr { border-left-color: #00a86b; }
+    .stat-card.payment-cash { border-left-color: #ff7700; }
+    
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--border);
+    }
+    .tab-btn {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #666;
+      transition: var(--transition);
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    .tab-btn:hover {
+      color: var(--primary-dark);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    
+    .orders-list, .reservations-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .order-card, .reservation-card {
+      background: var(--light);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      border-left: 4px solid var(--primary);
+    }
+    .order-card.status-in_progress { border-left-color: #2196f3; }
+    .order-card.status-done { border-left-color: #4caf50; opacity: .85; }
+    .reservation-card.status-confirmed { border-left-color: #4caf50; }
+    .reservation-card.status-cancelled { border-left-color: #999; opacity: .7; }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .card-id { font-weight: 700; font-size: 1.1rem; color: var(--dark); }
+    .card-time { font-size: .9rem; color: #666; }
+    .card-status {
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      font-size: .85rem;
+      font-weight: 600;
+    }
+    .card-status.status-new { background: rgba(255,119,0,.2); color: var(--primary-dark); }
+    .card-status.status-in_progress { background: rgba(33,150,243,.2); color: #1976d2; }
+    .card-status.status-done { background: rgba(76,175,80,.2); color: #2e7d32; }
+    .card-status.status-pending { background: rgba(255,119,0,.2); color: var(--primary-dark); }
+    .card-status.status-confirmed { background: rgba(76,175,80,.2); color: #2e7d32; }
+    .card-status.status-cancelled { background: rgba(153,153,153,.2); color: #666; }
+    
+    .card-body { margin-bottom: 12px; }
+    .order-items, .reservation-details {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .order-items li {
+      padding: 6px 0;
+      border-bottom: 1px dashed #eee;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .order-items li:last-child { border-bottom: none; }
+    .order-total { font-weight: 700; font-size: 1.1rem; color: var(--primary); margin-top: 8px; }
+    .order-payment { font-size: .9rem; color: #666; margin-top: 4px; }
+    .order-comment, .reservation-comment {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: var(--radius-sm);
+      font-size: .9rem;
+      color: #333;
+    }
+    .reservation-details li {
+      padding: 6px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .reservation-details strong { color: var(--dark); }
+    
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .card-actions button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+    .card-actions .btn-confirm { background: #4caf50; color: #fff; }
+    .card-actions .btn-confirm:hover { background: #388e3c; }
+    .card-actions .btn-cancel { background: #f44336; color: #fff; }
+    .card-actions .btn-cancel:hover { background: #d32f2f; }
+    .card-actions button:disabled { opacity: .6; cursor: not-allowed; }
+    
+    .manager-empty {
+      text-align: center;
+      padding: 48px 20px;
+      color: #666;
+    }
+    .manager-error {
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="manager-page">
+    <div class="manager-header">
+      <div>
+        <h1><i class="fas fa-chart-line"></i> Панель менеджера</h1>
+        <p class="manager-auto">Обновление каждые 30 сек</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <a href="index.html"><i class="fas fa-home"></i> Меню</a>
+        <a href="staff-orders.html"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
+        <div class="sound-controls">
+          <button type="button" class="sound-btn" id="btnSound" aria-label="Звуковые уведомления">
+            <i class="fas fa-volume-high"></i> Звук: выкл
+          </button>
+          <div class="sound-vol" aria-label="Громкость уведомлений">
+            <span>Громкость</span>
+            <input id="soundVolume" type="range" min="0" max="1" step="0.05" value="0.85">
+          </div>
+        </div>
+        <button type="button" class="manager-refresh" id="btnRefresh" aria-label="Обновить">
+          <i class="fas fa-sync-alt"></i> Обновить
+        </button>
+      </div>
+    </div>
+
+    <div id="managerError" class="manager-error" hidden></div>
+    
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="orders">Заказы и оплаты</button>
+      <button class="tab-btn" data-tab="reservations">Бронирования</button>
+    </div>
+
+    <div id="tabOrders" class="tab-content active">
+      <div id="ordersContainer" class="orders-list"></div>
+      <div id="ordersEmpty" class="manager-empty" hidden>
+        <p>Пока нет заказов.</p>
+      </div>
+    </div>
+
+    <div id="tabReservations" class="tab-content">
+      <div id="reservationsContainer" class="reservations-list"></div>
+      <div id="reservationsEmpty" class="manager-empty" hidden>
+        <p>Пока нет бронирований.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Если страницу открыли как file://, нужен явный адрес сервера
+    const API_BASE = window.MANAGER_API_BASE || 'http://localhost:3000';
+    const ORDERS_URL = API_BASE + '/api/orders';
+    const RESERVATIONS_URL = API_BASE + '/api/reservations';
+    const REFRESH_INTERVAL = 30000;
+
+    const statsGrid = document.getElementById('statsGrid');
+    const ordersContainer = document.getElementById('ordersContainer');
+    const reservationsContainer = document.getElementById('reservationsContainer');
+    const ordersEmpty = document.getElementById('ordersEmpty');
+    const reservationsEmpty = document.getElementById('reservationsEmpty');
+    const managerError = document.getElementById('managerError');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnSound = document.getElementById('btnSound');
+    const soundVolume = document.getElementById('soundVolume');
+
+    let currentTab = 'orders';
+    let soundEnabled = false;
+    let audioCtx = null;
+    const knownOrderIds = new Set();
+    const knownReservationIds = new Set();
+    let initializedKnownIds = false;
+
+    function getVolume() {
+      const v = parseFloat(soundVolume && soundVolume.value);
+      if (Number.isFinite(v)) return Math.min(1, Math.max(0, v));
+      return 0.85;
+    }
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) audioCtx = new Ctx();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+
+    function playAlertBeep() {
+      if (!soundEnabled) return;
+      ensureAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const master = audioCtx.createGain();
+      master.gain.value = Math.max(0.05, getVolume());
+      master.connect(audioCtx.destination);
+
+      const pattern = [
+        { t: 0.00, f: 880, d: 0.12 },
+        { t: 0.18, f: 880, d: 0.12 },
+        { t: 0.36, f: 988, d: 0.14 }
+      ];
+
+      pattern.forEach(p => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(p.f, now + p.t);
+        g.gain.setValueAtTime(0.0001, now + p.t);
+        g.gain.exponentialRampToValueAtTime(1.0, now + p.t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + p.t + p.d);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(now + p.t);
+        osc.stop(now + p.t + p.d + 0.02);
+      });
+    }
+
+    function updateSoundUi() {
+      if (!btnSound) return;
+      btnSound.classList.toggle('sound-on', soundEnabled);
+      btnSound.innerHTML = soundEnabled
+        ? '<i class="fas fa-volume-high"></i> Звук: вкл'
+        : '<i class="fas fa-volume-xmark"></i> Звук: выкл';
+    }
+
+    if (btnSound) {
+      btnSound.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        if (soundEnabled) ensureAudio();
+        updateSoundUi();
+        if (soundEnabled) playAlertBeep();
+      });
+      updateSoundUi();
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+        currentTab = tab;
+      });
+    });
+
+    function showError(msg) {
+      managerError.textContent = msg;
+      managerError.hidden = false;
+    }
+    function hideError() {
+      managerError.hidden = true;
+    }
+
+    function paymentLabel(method) {
+      return { visa: 'Visa', qr: 'QR-код', cash: 'Наличные' }[method] || method;
+    }
+
+    function statusLabel(status) {
+      return {
+        new: 'Новый',
+        in_progress: 'В работе',
+        done: 'Готово',
+        pending: 'Ожидает',
+        confirmed: 'Подтверждено',
+        cancelled: 'Отменено'
+      }[status] || status;
+    }
+
+    function formatTime(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+      } catch (_) { return iso; }
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s == null ? '' : s;
+      return div.innerHTML;
+    }
+
+    function renderStats(ordersList, reservationsList) {
+      const totalOrders = ordersList.length;
+      const totalRevenue = ordersList.reduce((sum, o) => sum + (o.total || 0), 0);
+      const visaTotal = ordersList.filter(o => o.paymentMethod === 'visa').reduce((sum, o) => sum + (o.total || 0), 0);
+      const qrTotal = ordersList.filter(o => o.paymentMethod === 'qr').reduce((sum, o) => sum + (o.total || 0), 0);
+      const cashTotal = ordersList.filter(o => o.paymentMethod === 'cash').reduce((sum, o) => sum + (o.total || 0), 0);
+      const pendingReservations = reservationsList.filter(r => r.status === 'pending').length;
+
+      statsGrid.innerHTML = `
+        <div class="stat-card">
+          <h3>Всего заказов</h3>
+          <div class="stat-value">${totalOrders}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Общая выручка</h3>
+          <div class="stat-value">${totalRevenue.toFixed(0)}₽</div>
+        </div>
+        <div class="stat-card payment-visa">
+          <h3>Visa</h3>
+          <div class="stat-value">${visaTotal.toFixed(0)}₽</div>
+        </div>
+        <div class="stat-card payment-qr">
+          <h3>QR-код</h3>
+          <div class="stat-value">${qrTotal.toFixed(0)}₽</div>
+        </div>
+        <div class="stat-card payment-cash">
+          <h3>Наличные</h3>
+          <div class="stat-value">${cashTotal.toFixed(0)}₽</div>
+        </div>
+        <div class="stat-card">
+          <h3>Ожидают подтверждения</h3>
+          <div class="stat-value">${pendingReservations}</div>
+        </div>
+      `;
+    }
+
+    function renderOrders(ordersList) {
+      hideError();
+      ordersContainer.innerHTML = '';
+
+      if (!ordersList || ordersList.length === 0) {
+        ordersEmpty.hidden = false;
+        return;
+      }
+      ordersEmpty.hidden = true;
+
+      ordersList.forEach(order => {
+        const card = document.createElement('div');
+        card.className = 'order-card status-' + (order.status || 'new');
+
+        const itemsHtml = (order.items || [])
+          .map(i => `<li><span>${escapeHtml(i.name)} × ${i.qty}</span><span>${(i.price * i.qty)}₽</span></li>`)
+          .join('');
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div>
+              <span class="card-id">Заказ ${escapeHtml(order.orderId)}</span>
+              <div class="card-time">${formatTime(order.createdAt)}</div>
+            </div>
+            <span class="card-status status-${order.status || 'new'}">${statusLabel(order.status || 'new')}</span>
+          </div>
+          <div class="card-body">
+            <ul class="order-items">${itemsHtml}</ul>
+            <div class="order-total">Итого: ${order.total || 0}₽</div>
+            <div class="order-payment"><strong>Оплата:</strong> ${paymentLabel(order.paymentMethod)}</div>
+            ${(order.comment ? '<div class="order-comment"><strong>Комментарий:</strong> ' + escapeHtml(order.comment) + '</div>' : '')}
+          </div>
+        `;
+
+        ordersContainer.appendChild(card);
+      });
+    }
+
+    function renderReservations(reservationsList) {
+      hideError();
+      reservationsContainer.innerHTML = '';
+
+      if (!reservationsList || reservationsList.length === 0) {
+        reservationsEmpty.hidden = false;
+        return;
+      }
+      reservationsEmpty.hidden = true;
+
+      reservationsList.forEach(reservation => {
+        const card = document.createElement('div');
+        card.className = 'reservation-card status-' + (reservation.status || 'pending');
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div>
+              <span class="card-id">Бронь ${escapeHtml(reservation.reservationId)}</span>
+              <div class="card-time">${formatTime(reservation.createdAt)}</div>
+            </div>
+            <span class="card-status status-${reservation.status || 'pending'}">${statusLabel(reservation.status || 'pending')}</span>
+          </div>
+          <div class="card-body">
+            <ul class="reservation-details">
+              <li><strong>Имя:</strong> <span>${escapeHtml(reservation.name)}</span></li>
+              <li><strong>Телефон:</strong> <span>${escapeHtml(reservation.phone)}</span></li>
+              <li><strong>Дата:</strong> <span>${escapeHtml(reservation.date)}</span></li>
+              <li><strong>Время:</strong> <span>${escapeHtml(reservation.time)}</span></li>
+              <li><strong>Гостей:</strong> <span>${reservation.guests || 2}</span></li>
+            </ul>
+            ${(reservation.comment ? '<div class="reservation-comment"><strong>Пожелания:</strong> ' + escapeHtml(reservation.comment) + '</div>' : '')}
+          </div>
+          <div class="card-actions">
+            ${(reservation.status === 'pending' ? '<button type="button" class="btn-confirm" data-reservation-id="' + escapeHtml(reservation.reservationId) + '" data-status="confirmed">Подтвердить</button>' : '')}
+            ${(reservation.status !== 'cancelled' ? '<button type="button" class="btn-cancel" data-reservation-id="' + escapeHtml(reservation.reservationId) + '" data-status="cancelled">Отменить</button>' : '')}
+          </div>
+        `;
+
+        card.querySelectorAll('.btn-confirm, .btn-cancel').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.reservationId;
+            const status = btn.dataset.status;
+            if (id && status) updateReservationStatus(id, status);
+          });
+        });
+
+        reservationsContainer.appendChild(card);
+      });
+    }
+
+    async function updateReservationStatus(reservationId, status) {
+      try {
+        const res = await fetch(API_BASE + '/api/reservations/' + encodeURIComponent(reservationId), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        if (res.ok) fetchAll();
+      } catch (e) {
+        showError('Ошибка обновления статуса: ' + e.message);
+      }
+    }
+
+    async function fetchAll() {
+      btnRefresh.disabled = true;
+      try {
+        const [ordersRes, reservationsRes] = await Promise.all([
+          fetch(ORDERS_URL),
+          fetch(RESERVATIONS_URL)
+        ]);
+
+        if (!ordersRes.ok) throw new Error('Сервер заказов вернул ' + ordersRes.status);
+        if (!reservationsRes.ok) throw new Error('Сервер бронирований вернул ' + reservationsRes.status);
+
+        const ordersData = await ordersRes.json();
+        const reservationsData = await reservationsRes.json();
+
+        const ordersList = ordersData.orders || [];
+        const reservationsList = reservationsData.reservations || [];
+
+        if (!initializedKnownIds) {
+          ordersList.forEach(o => o && o.orderId && knownOrderIds.add(o.orderId));
+          reservationsList.forEach(r => r && r.reservationId && knownReservationIds.add(r.reservationId));
+        } else {
+          const hasNewOrder = ordersList.some(o => o && o.orderId && !knownOrderIds.has(o.orderId));
+          const hasNewRes = reservationsList.some(r => r && r.reservationId && !knownReservationIds.has(r.reservationId));
+          ordersList.forEach(o => o && o.orderId && knownOrderIds.add(o.orderId));
+          reservationsList.forEach(r => r && r.reservationId && knownReservationIds.add(r.reservationId));
+          if (hasNewOrder || hasNewRes) playAlertBeep();
+        }
+        initializedKnownIds = true;
+
+        renderStats(ordersList, reservationsList);
+        renderOrders(ordersList);
+        renderReservations(reservationsList);
+      } catch (e) {
+        showError('Не удалось загрузить данные. Убедитесь, что сервер запущен (npm start в папке server). ' + e.message);
+        renderStats([], []);
+        renderOrders([]);
+        renderReservations([]);
+      }
+      btnRefresh.disabled = false;
+    }
+
+    btnRefresh.addEventListener('click', fetchAll);
+    fetchAll();
+    setInterval(fetchAll, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>

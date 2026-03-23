@@ -1,0 +1,26 @@
+[
+  {
+    "id": "bb01bff3-35db-4a93-92c9-dca10cda1ac7",
+    "name": "Абдалла Абдалла Моаз Ваел",
+    "email": "moaze9708@gmail.com",
+    "passwordHash": "15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225",
+    "role": "user",
+    "createdAt": "2026-03-10T13:00:39.695Z"
+  },
+  {
+    "id": "1bce151a-b706-4a8f-8b53-d4ca3f35d567",
+    "name": "Ваел Абдалла Моаз",
+    "email": "elsayedmoazwael@gmail.com",
+    "passwordHash": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+    "role": "user",
+    "createdAt": "2026-03-10T13:33:52.244Z"
+  },
+  {
+    "id": "10b95c3a-cc62-4ae0-a9ce-9ba4ff616d09",
+    "name": "Абдалла Абдалла Моаз Ваел",
+    "email": "sbrodskyteam@gmail.com",
+    "passwordHash": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+    "role": "user",
+    "createdAt": "2026-03-10T13:55:52.706Z"
+  }
+]
