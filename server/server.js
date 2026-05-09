@@ -24,7 +24,10 @@ const app = express();
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const env = validateAndLoadEnv();
 const prisma = new PrismaClient();
-const pgPool = new pg.Pool({ connectionString: env.databaseUrl });
+const pgPool = new pg.Pool({
+  connectionString: env.databaseUrl,
+  ssl: env.isProd ? { rejectUnauthorized: false } : false
+});
 const PORT = Number(process.env.PORT) || env.port || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..');
 
