@@ -1,0 +1,62 @@
+databases:
+  - name: brodsky-db
+    databaseName: brodsky
+    user: brodsky
+    plan: free
+
+services:
+  - type: web
+    name: brodsky-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: master
+    autoDeploy: true
+
+    buildCommand: npm install && npx prisma migrate deploy --schema prisma/schema.prisma && npx prisma generate --schema prisma/schema.prisma
+    startCommand: node server/server.js
+    healthCheckPath: /health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render sets PORT automatically for web services.
+      # The app must listen on process.env.PORT.
+      - key: NODE_VERSION
+        value: "20"
+
+      - key: DATABASE_URL
+        fromDatabase:
+          name: brodsky-db
+          property: connectionString
+
+      # Sessions / cookies
+      - key: SESSION_SECRET
+        value: "CHANGE_ME_RENDER_SESSION_SECRET_MIN_32_CHARS"
+
+      # CSRF_SECRET is reserved for future cookie-based CSRF mode.
+      # Current implementation uses session-based CSRF via csurf().
+      - key: CSRF_SECRET
+        value: "CHANGE_ME_RENDER_CSRF_SECRET_MIN_32_CHARS"
+
+      # YooKassa credentials
+      - key: YOOKASSA_SHOP_ID
+        value: "YOUR_YOOKASSA_SHOP_ID"
+      - key: YOOKASSA_SECRET_KEY
+        value: "YOUR_YOOKASSA_SECRET_KEY"
+
+      # Public URL of the deployed app (HTTPS)
+      - key: PUBLIC_BASE_URL
+        value: "https://brodsky-web.onrender.com"
+
+      # CORS allowlist (comma-separated). For production set exact origin(s).
+      - key: CORS_ORIGIN
+        value: "https://brodsky-web.onrender.com"
+
+      # Proxy + cookies (recommended on Render)
+      - key: TRUST_PROXY
+        value: "1"
+      - key: COOKIE_SECURE
+        value: "1"
+

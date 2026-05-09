@@ -7,8 +7,8 @@ BRODSKY is a small web application for a cafe/restaurant workflow:
 
 The project is designed to run locally with a simple Node.js server that serves the static frontend and exposes a JSON API.
 
-> Note: In the current codebase, **orders and reservations are stored in memory only** (they disappear when the server restarts).  
-> Authentication (signup/login) uses **Prisma + PostgreSQL**.
+> Note: In the current codebase, **orders, reservations, payments, and users are persisted in PostgreSQL** via Prisma.  
+> Authentication uses **secure cookie sessions** (HttpOnly) and **CSRF protection** for state-changing requests.
 
 ## Table of Contents
 - [Features](#features)
@@ -42,12 +42,14 @@ The project is designed to run locally with a simple Node.js server that serves 
   - audible notification toggle + volume
 - **Auth overlay** on the menu page:
   - signup / login / continue as guest
-  - sessions stored in browser `localStorage`
+  - UI may cache state in `localStorage`, but auth is enforced by server-side cookie sessions (`/api/auth/me`)
 
 ## Technologies Used
-- **Frontend**: HTML, CSS, JavaScript (DOM, Fetch API, LocalStorage)
-- **Backend**: Node.js, Express, CORS
-- **Auth storage**: PostgreSQL + Prisma (Prisma Client)
+- **Frontend**: HTML, CSS, JavaScript (DOM, Fetch API, LocalStorage for UI cache)
+- **Backend**: Node.js, Express, CORS, Helmet, Rate limiting
+- **Database**: PostgreSQL + Prisma (Prisma Client)
+- **Auth**: cookie sessions (`express-session`) + Postgres session store (`connect-pg-simple`)
+- **CSRF**: `csurf` with `X-CSRF-Token` header
 - **Password hashing**: `crypto` (PBKDF2)
 
 Key dependencies (root `package.json`):
@@ -107,9 +109,9 @@ Always open pages via HTTP (served by the Node server), not via `file:///`.
 - **Manager dashboard**: `http://localhost:3000/manager.html`
 
 ### Important behavior (data persistence)
-- **Orders and reservations**: stored **in memory** inside `server/server.js`.
-  - They **do not persist** after restarting the server.
+- **Orders, reservations, and payments**: stored in **PostgreSQL** via Prisma.
 - **Users (auth)**: stored in **PostgreSQL** via Prisma.
+- **Sessions**: stored in **PostgreSQL** (server-side), cookie is HttpOnly.
 
 ## API Documentation
 
@@ -117,7 +119,7 @@ Base URL: `http://localhost:3000`
 
 ### Auth
 #### `POST /api/auth/register`
-Create a new user (Customer).
+Create a new user.
 
 **Body**
 ```json
@@ -126,7 +128,7 @@ Create a new user (Customer).
 
 **Response (success)**
 ```json
-{ "success": true, "token": "…", "user": { "id": "1", "name": "Anna", "email": "anna@example.com", "role": "user" } }
+{ "success": true, "user": { "id": "…", "name": "Anna", "email": "anna@example.com", "role": "user" } }
 ```
 
 #### `POST /api/auth/login`
@@ -140,9 +142,22 @@ Create a new user (Customer).
 Same shape as register.
 
 #### `GET /api/auth/me`
-Requires header: `Authorization: Bearer <token>`
+Uses cookie session (send requests with credentials).
 
-### Orders (in-memory)
+#### `POST /api/auth/logout`
+Destroys cookie session. Requires CSRF token (see below).
+
+### CSRF
+#### `GET /api/csrf`
+Returns:
+```json
+{ "csrfToken": "..." }
+```
+
+For every state-changing request (`POST`, `PATCH`), send header:
+`X-CSRF-Token: <csrfToken>`
+
+### Orders
 #### `POST /api/orders`
 
 **Body**
@@ -185,7 +200,7 @@ Update order status.
 
 Allowed: `new`, `in_progress`, `done`
 
-### Reservations (in-memory)
+### Reservations
 #### `POST /api/reservations`
 
 **Body**
@@ -223,7 +238,7 @@ Allowed: `pending`, `confirmed`, `cancelled`
 
 ### Health
 #### `GET /api/health`
-Returns counts of in-memory orders/reservations:
+Returns counts of DB-backed orders/reservations:
 
 ```json
 { "status": "ok", "time": "…", "ordersCount": 0, "reservationsCount": 0 }
@@ -235,7 +250,7 @@ Returns counts of in-memory orders/reservations:
 Located at the project root: `./.env`
 
 Used variables:
-- **`DATABASE_URL`**: PostgreSQL connection string for Prisma/Auth.
+- **`DATABASE_URL`**: PostgreSQL connection string for Prisma and session store.
   - Example:
 
 ```env
@@ -243,7 +258,9 @@ DATABASE_URL="postgresql://Tech@localhost:5432/brodsky?schema=public"
 ```
 
 - **`PORT`** (optional): server port (default `3000`)
-- **`CORS_ORIGIN`** (optional): CORS origin (default `*`)
+- **`CORS_ORIGIN`**: CORS allowlist (use explicit origins in production)
+- **`PUBLIC_BASE_URL`**: public base URL (used for YooKassa return URL)
+- **`SESSION_SECRET`**: session secret (required in production)
 
 ### Optional frontend API base overrides
 These pages support overriding API base via global variables:
@@ -266,7 +283,6 @@ E:\pro vkr\
     migrations\           # Prisma migrations (if applied)
   server\
     server.js             # Express server + API endpoints
-    package.json          # (legacy) server folder package file
   .env                    # Environment variables (DATABASE_URL, etc.)
   package.json            # Root dependencies + Prisma scripts
 ```

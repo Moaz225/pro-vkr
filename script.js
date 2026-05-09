@@ -23,6 +23,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const apiBase = window.BRODSKY_API_BASE || 'http://localhost:3000';
 
+  let csrfToken = null;
+  async function ensureCsrfToken() {
+    if (csrfToken) return csrfToken;
+    const res = await fetch(apiBase + '/api/csrf', { credentials: 'include' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.csrfToken) {
+      throw new Error('Не удалось получить CSRF токен');
+    }
+    csrfToken = data.csrfToken;
+    return csrfToken;
+  }
+
+  async function fetchJson(url, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    const isStateChanging = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+
+    const headers = Object.assign({}, options.headers || {});
+    if (!headers['Content-Type'] && options.body) headers['Content-Type'] = 'application/json';
+
+    const finalOptions = Object.assign(
+      {
+        credentials: 'include'
+      },
+      options,
+      {
+        headers
+      }
+    );
+
+    if (isStateChanging) {
+      const token = await ensureCsrfToken();
+      finalOptions.headers['X-CSRF-Token'] = token;
+    }
+
+    const res = await fetch(url, finalOptions);
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  }
+
   function saveUserSession(session) {
     try {
       localStorage.setItem('brodsky_user', JSON.stringify(session));
@@ -60,11 +99,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (authOverlay) {
     const existingSession = loadUserSession();
-    if (!existingSession) {
-      showAuthOverlay();
-    } else {
-      // На случай если браузер игнорирует hidden/стили — принудительно убираем оверлей
-      hideAuthOverlay();
+    if (!existingSession) showAuthOverlay();
+    else hideAuthOverlay();
+
+    // If we think we are logged in, verify cookie session (Phase 5).
+    if (existingSession && existingSession.mode === 'user') {
+      fetchJson(apiBase + '/api/auth/me', { method: 'GET' })
+        .then(({ res, data }) => {
+          if (!res.ok || !data || !data.success) {
+            localStorage.removeItem('brodsky_user');
+            showAuthOverlay();
+          }
+        })
+        .catch(() => {
+          // Keep UI usable if server is offline.
+        });
     }
 
     if (btnAuthGuest) {
@@ -135,12 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const body = currentAuthMode === 'register'
             ? { name, email, password }
             : { email, password };
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
-          const data = await res.json().catch(() => ({}));
+          const { res, data } = await fetchJson(url, { method: 'POST', body: JSON.stringify(body) });
           if (!res.ok || !data.success) {
             const message = data && data.error ? data.error : 'Ошибка авторизации. Попробуйте ещё раз.';
             if (authError) {
@@ -151,7 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           saveUserSession({
             mode: 'user',
-            token: data.token,
             user: data.user
           });
           hideAuthOverlay();
@@ -172,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Сброс текущей сессии и повторный выбор: войти / зарегистрироваться / гость
       saveUserSession(null);
       localStorage.removeItem('brodsky_user');
+      fetchJson(apiBase + '/api/auth/logout', { method: 'POST' }).catch(() => {});
       showAuthOverlay();
     });
   }
@@ -343,12 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (submitBtn) submitBtn.disabled = true;
 
       try {
-        const res = await fetch(apiBase + '/api/reservations', {
+        const { res, data } = await fetchJson(apiBase + '/api/reservations', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(reservation)
         });
-        const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
           alert(`Спасибо, ${reservation.name}! Заявка на бронирование отправлена.\n\nНомер бронирования: ${data.reservationId || ''}\nАдминистратор свяжется с вами для подтверждения.`);
           reservationForm.reset();
@@ -371,6 +413,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const productInfoCalories = document.getElementById('productInfoCalories');
   const productInfoIngredients = document.getElementById('productInfoIngredients');
   const productInfoCloseBtn = document.getElementById('productInfoClose');
+
+  // Local fallback image to ensure the modal always shows an image
+  // even if remote URLs (e.g. Unsplash) are blocked or unavailable.
+  const DEFAULT_PRODUCT_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff7700" stop-opacity="0.95"/>
+          <stop offset="1" stop-color="#111111" stop-opacity="1"/>
+        </linearGradient>
+      </defs>
+      <rect width="800" height="600" fill="url(#g)"/>
+      <rect x="48" y="48" width="704" height="504" rx="24" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.25)"/>
+      <text x="400" y="320" text-anchor="middle" font-size="44" font-family="Arial, Helvetica, sans-serif" fill="#ffffff" font-weight="700">BRODSKY</text>
+      <text x="400" y="370" text-anchor="middle" font-size="22" font-family="Arial, Helvetica, sans-serif" fill="rgba(255,255,255,0.9)">No image</text>
+    </svg>
+  `);
 
   const productMeta = {
     'эспрессо': {
@@ -430,13 +489,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Product images are now sourced from the database (GET /api/products).
+  // We build an in-memory lookup by normalized name to match the clicked item.
+  let dbProductsLoaded = false;
+  let dbProductsByNormalized = new Map(); // normalizedName -> product[]
+  let dbProductKeys = []; // normalizedName keys sorted by length desc
+
+  function buildDbLookup(products) {
+    dbProductsByNormalized = new Map();
+    for (const p of products || []) {
+      const key = normalizeName(String(p.name || ""));
+      if (!key) continue;
+      const arr = dbProductsByNormalized.get(key) || [];
+      arr.push(p);
+      dbProductsByNormalized.set(key, arr);
+    }
+    dbProductKeys = [...dbProductsByNormalized.keys()].sort((a, b) => b.length - a.length);
+    dbProductsLoaded = true;
+  }
+
+  async function loadDbProducts() {
+    try {
+      const res = await fetch(apiBase + '/api/products', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      const products = data.products || [];
+      buildDbLookup(products);
+      console.log('[BRODSKY] Loaded products for images:', products.length);
+    } catch (e) {
+      console.warn('[BRODSKY] Could not load /api/products. Falling back to remote meta images.', e);
+    }
+  }
+
   function normalizeName(name) {
     return name
       .toLowerCase()
       .replace(/[0-9]/g, '')
-      .replace(/₽|г|мл/g, '')
+      // Remove common currency/unit suffixes without destroying characters inside words.
+      // Example: "Маргарита 360 г" -> "маргарита" (do not remove "г" from "маргарита").
+      .replace(/₽/g, '')
+      .replace(/\s*г\b/g, ' ')
+      .replace(/\s*мл\b/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  // Trigger async loading of product images from DB.
+  // We do not block UI interactions; the first image may use fallback until the data arrives.
+  loadDbProducts();
+
+  function findDbProductByNormalized(normalized) {
+    if (!dbProductsLoaded) return null;
+    if (dbProductsByNormalized.has(normalized)) return dbProductsByNormalized.get(normalized)[0];
+    for (const key of dbProductKeys) {
+      if (normalized.startsWith(key)) return dbProductsByNormalized.get(key)[0];
+    }
+    return null;
   }
 
   function openProductInfoModal() {
@@ -493,11 +600,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (qtyEl) qtyEl.value = '1';
 
     if (productInfoImage) {
-      if (meta && meta.image) {
-        productInfoImage.src = meta.image;
-      } else {
-        productInfoImage.src = 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80';
-      }
+      // Reset fallback flag for this render.
+      productInfoImage.dataset.fallbackApplied = '0';
+
+      const dbProduct = findDbProductByNormalized(normalized);
+      const nextSrc = (dbProduct && dbProduct.imageUrl)
+        ? dbProduct.imageUrl
+        : (meta && meta.image ? meta.image : DEFAULT_PRODUCT_IMAGE);
+      productInfoImage.src = nextSrc;
+
+      // If remote image fails to load, switch to the local default.
+      // Prevent infinite loops using a data flag.
+      productInfoImage.onerror = () => {
+        if (productInfoImage.dataset.fallbackApplied === '1') return;
+        productInfoImage.dataset.fallbackApplied = '1';
+        productInfoImage.src = DEFAULT_PRODUCT_IMAGE;
+      };
     }
 
     openProductInfoModal();
@@ -718,19 +836,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
       btnPay.disabled = true;
       try {
-        const res = await fetch(apiBase + '/api/orders', {
+        // 1) Create an order first (status = pending). Frontend must NOT mark it as paid.
+        const { res, data } = await fetchJson(apiBase + '/api/orders', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(order)
         });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && data.success) {
-          cart.clear();
-          closeCheckout();
-          alert('Заказ №' + (data.orderId || '') + ' принят. Оплата: ' + (paymentMethod === 'visa' ? 'Visa' : paymentMethod === 'qr' ? 'QR-код' : 'Наличные') + '. Ожидайте приготовления.');
-        } else {
-          alert('Ошибка отправки заказа. Попробуйте позже или оплатите на кассе.');
+
+        if (!res.ok || !data.success || !data.orderId) {
+          alert(data && data.error ? data.error : 'Ошибка создания заказа. Попробуйте позже.');
+          return;
         }
+
+        // 2) Create YooKassa payment and redirect the user to confirmation URL.
+        const { res: paymentRes, data: paymentData } = await fetchJson(apiBase + '/api/payments/yookassa/create', {
+          method: 'POST',
+          body: JSON.stringify({
+            orderId: data.orderId,
+            paymentMethod
+          })
+        });
+
+        if (!paymentRes.ok || !paymentData.success || !paymentData.confirmationUrl) {
+          alert(paymentData && paymentData.error ? paymentData.error : 'Ошибка создания оплаты. Попробуйте позже.');
+          return;
+        }
+
+        // Clear the cart now (payment is in progress). Payment final state is controlled by webhook.
+        cart.clear();
+        closeCheckout();
+        window.location.href = paymentData.confirmationUrl;
       } catch (err) {
         alert('Сервер недоступен. Заказ можно оплатить на кассе (наличные, карта или QR).');
       }

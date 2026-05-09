@@ -102,8 +102,10 @@
       font-weight: 600;
     }
     .order-status.status-new { background: rgba(255,119,0,.2); color: var(--primary-dark); }
+    .order-status.status-pending { background: rgba(255,119,0,.15); color: #8a5a00; }
     .order-status.status-in_progress { background: rgba(33,150,243,.2); color: #1976d2; }
     .order-status.status-done { background: rgba(76,175,80,.2); color: #2e7d32; }
+    .order-status.status-cancelled { background: rgba(153,153,153,.2); color: #666; }
     .order-body { margin-bottom: 12px; }
     .order-items { list-style: none; margin: 0; padding: 0; }
     .order-items li {
@@ -187,6 +189,16 @@
     const ORDERS_URL = API_BASE + '/api/orders';
     const RESERVATIONS_URL = API_BASE + '/api/reservations';
     const REFRESH_INTERVAL = 30000;
+
+    let csrfToken = null;
+    async function ensureCsrfToken() {
+      if (csrfToken) return csrfToken;
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.csrfToken) throw new Error('CSRF token missing');
+      csrfToken = data.csrfToken;
+      return csrfToken;
+    }
 
     const ordersContainer = document.getElementById('ordersContainer');
     const reservationsContainer = document.getElementById('reservationsContainer');
@@ -325,9 +337,11 @@
 
     async function updateOrderStatus(orderId, status) {
       try {
+        const token = await ensureCsrfToken();
         const res = await fetch(API_BASE + '/api/orders/' + encodeURIComponent(orderId), {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+          credentials: 'include',
           body: JSON.stringify({ status })
         });
         if (res.ok) fetchOrders();
@@ -370,7 +384,7 @@
           </div>
           <div class="order-actions">
             ${(order.status === 'new' ? '<button type="button" class="btn-start" data-order-id="' + escapeHtml(order.orderId) + '" data-status="in_progress">В работу</button>' : '')}
-            ${(order.status !== 'done' ? '<button type="button" class="btn-done" data-order-id="' + escapeHtml(order.orderId) + '" data-status="done">Готово</button>' : '')}
+            ${(order.status === 'in_progress' ? '<button type="button" class="btn-done" data-order-id="' + escapeHtml(order.orderId) + '" data-status="done">Готово</button>' : '')}
           </div>
         `;
 
@@ -438,10 +452,10 @@
         const data = await res.json();
         const list = data.orders || [];
         if (!initializedKnownIds) {
-          list.forEach(o => o && o.orderId && knownOrderIds.add(o.orderId));
+          list.forEach(o => o && o.orderId && o.status === 'new' && knownOrderIds.add(o.orderId));
         } else {
-          const hasNew = list.some(o => o && o.orderId && !knownOrderIds.has(o.orderId));
-          list.forEach(o => o && o.orderId && knownOrderIds.add(o.orderId));
+          const hasNew = list.some(o => o && o.orderId && o.status === 'new' && !knownOrderIds.has(o.orderId));
+          list.forEach(o => o && o.orderId && o.status === 'new' && knownOrderIds.add(o.orderId));
           if (hasNew) playAlertBeep();
         }
         renderOrders(list);

@@ -299,6 +299,16 @@
     const RESERVATIONS_URL = API_BASE + '/api/reservations';
     const REFRESH_INTERVAL = 30000;
 
+    let csrfToken = null;
+    async function ensureCsrfToken() {
+      if (csrfToken) return csrfToken;
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.csrfToken) throw new Error('CSRF token missing');
+      csrfToken = data.csrfToken;
+      return csrfToken;
+    }
+
     const statsGrid = document.getElementById('statsGrid');
     const ordersContainer = document.getElementById('ordersContainer');
     const reservationsContainer = document.getElementById('reservationsContainer');
@@ -431,10 +441,12 @@
 
     function renderStats(ordersList, reservationsList) {
       const totalOrders = ordersList.length;
-      const totalRevenue = ordersList.reduce((sum, o) => sum + (o.total || 0), 0);
-      const visaTotal = ordersList.filter(o => o.paymentMethod === 'visa').reduce((sum, o) => sum + (o.total || 0), 0);
-      const qrTotal = ordersList.filter(o => o.paymentMethod === 'qr').reduce((sum, o) => sum + (o.total || 0), 0);
-      const cashTotal = ordersList.filter(o => o.paymentMethod === 'cash').reduce((sum, o) => sum + (o.total || 0), 0);
+      // Revenue should reflect only completed orders.
+      const paidOrders = ordersList.filter(o => o.status === 'done');
+      const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+      const visaTotal = paidOrders.filter(o => o.paymentMethod === 'visa').reduce((sum, o) => sum + (o.total || 0), 0);
+      const qrTotal = paidOrders.filter(o => o.paymentMethod === 'qr').reduce((sum, o) => sum + (o.total || 0), 0);
+      const cashTotal = paidOrders.filter(o => o.paymentMethod === 'cash').reduce((sum, o) => sum + (o.total || 0), 0);
       const pendingReservations = reservationsList.filter(r => r.status === 'pending').length;
 
       statsGrid.innerHTML = `
@@ -555,9 +567,11 @@
 
     async function updateReservationStatus(reservationId, status) {
       try {
+        const token = await ensureCsrfToken();
         const res = await fetch(API_BASE + '/api/reservations/' + encodeURIComponent(reservationId), {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+          credentials: 'include',
           body: JSON.stringify({ status })
         });
         if (res.ok) fetchAll();

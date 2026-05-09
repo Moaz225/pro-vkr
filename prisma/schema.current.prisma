@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CartItem {
+  id                  Int      @id @default(autoincrement())
+  customerId          Int
+  productId           Int
+  quantity            Int
+  dateAdded           DateTime @default(now())
+  specialInstructions String?
+  Customer            Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Product             Product  @relation(fields: [productId], references: [id])
+}
+
+model Category {
+  id      Int       @id @default(autoincrement())
+  name    String    @unique
+  Product Product[]
+}
+
+model Customer {
+  id               Int           @id @default(autoincrement())
+  name             String
+  email            String        @unique
+  phone            String?
+  address          String?
+  passwordHash     String
+  registrationDate DateTime      @default(now())
+  CartItem         CartItem[]
+  Order            Order[]
+  Reservation      Reservation[]
+}
+
+model Employee {
+  id           Int          @id @default(autoincrement())
+  name         String
+  role         EmployeeRole
+  email        String       @unique
+  passwordHash String
+  phone        String?
+  Order        Order[]
+}
+
+model Order {
+  id                   Int           @id @default(autoincrement())
+  customerId           Int
+  employeeId           Int?
+  orderDate            DateTime      @default(now())
+  totalAmount          Decimal
+  status               OrderStatus
+  paymentMethod        String
+  paymentStatus        PaymentStatus
+  paymentTransactionId String?
+  notificationStatus   String?
+  orderType            OrderType
+  deliveryAddress      String?
+  notes                String?
+  tableNumber          String?
+  Customer             Customer      @relation(fields: [customerId], references: [id])
+  Employee             Employee?     @relation(fields: [employeeId], references: [id])
+  OrderItem            OrderItem[]
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  quantity    Int
+  priceAtTime Decimal
+  Order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  Product     Product @relation(fields: [productId], references: [id])
+}
+
+model Product {
+  id            Int         @id @default(autoincrement())
+  name          String
+  description   String?
+  price         Decimal
+  stockQuantity Int         @default(0)
+  imageUrl      String?
+  isAvailable   Boolean     @default(true)
+  categoryId    Int?
+  CartItem      CartItem[]
+  OrderItem     OrderItem[]
+  Category      Category?   @relation(fields: [categoryId], references: [id])
+}
+
+model Reservation {
+  id                 Int               @id @default(autoincrement())
+  customerId         Int
+  tableId            Int
+  reservationDate    DateTime
+  reservationTime    DateTime
+  durationMinutes    Int
+  numberOfGuests     Int
+  specialRequests    String?
+  status             ReservationStatus
+  notificationStatus String?
+  createdAt          DateTime          @default(now())
+  Customer           Customer          @relation(fields: [customerId], references: [id])
+  RestaurantTable    RestaurantTable   @relation(fields: [tableId], references: [id])
+
+  @@unique([tableId, reservationDate, reservationTime])
+}
+
+model RestaurantTable {
+  id          Int           @id @default(autoincrement())
+  tableNumber Int           @unique
+  capacity    Int
+  location    String?
+  Reservation Reservation[]
+}
+
+enum EmployeeRole {
+  Staff
+  Manager
+}
+
+enum OrderStatus {
+  PendingPayment
+  New
+  InProgress
+  Done
+  Cancelled
+}
+
+enum OrderType {
+  DineIn
+  Takeaway
+  Delivery
+}
+
+enum PaymentProvider {
+  YooKassa
+}
+
+enum PaymentStatus {
+  Paid
+  Unpaid
+}
+
+enum ReservationStatus {
+  Confirmed
+  Cancelled
+  Completed
+  Pending
+}
+
+enum UserRole {
+  User
+  Staff
+  Manager
+}

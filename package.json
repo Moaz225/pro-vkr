@@ -17,9 +17,15 @@
   "dependencies": {
     "@prisma/client": "^6.0.0",
     "body-parser": "^2.2.2",
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.6",
+    "csurf": "^1.11.0",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.4.0",
+    "express-session": "^1.19.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "prisma": "^6.0.0"

@@ -7,161 +7,161 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// IMPORTANT (Render): deployment build runs:
+//   npx prisma migrate deploy --schema prisma/schema.prisma
+//   npx prisma generate --schema prisma/schema.prisma
+// Ensure migrations are committed before deploying.
+
 //
-// Enums
+// BRODSKY production schema (PWA + Node/Express + YooKassa)
+//
+// Notes:
+// - Orders/reservations are persisted in PostgreSQL for production reliability.
+// - Payments store only provider payment IDs + status; never store card details.
+// - Webhook notifications are deduplicated (idempotency) using a stable dedupe key.
 //
 
-enum EmployeeRole {
+enum UserRole {
+  User
   Staff
   Manager
 }
 
 enum OrderStatus {
-  Pending
-  Preparing
-  Completed
+  PendingPayment
+  New
+  InProgress
+  Done
   Cancelled
 }
 
-enum PaymentStatus {
-  Paid
-  Unpaid
+enum PaymentProvider {
+  YooKassa
 }
 
-enum OrderType {
-  DineIn    // 'Dine-in' in UI
-  Takeaway
-  Delivery
+enum PaymentStatus {
+  Pending
+  Succeeded
+  Canceled
 }
 
 enum ReservationStatus {
   Pending
   Confirmed
   Cancelled
-  Completed
 }
 
-//
-// Models
-//
-
-model Customer {
-  id               Int          @id @default(autoincrement())
-  name             String
-  email            String       @unique
-  phone            String?
-  address          String?
-  passwordHash     String
-  registrationDate DateTime     @default(now())
-
-  orders           Order[]
-  reservations     Reservation[]
-  cartItems        CartItem[]
-}
-
-model Employee {
-  id           Int          @id @default(autoincrement())
+model User {
+  id           String   @id @default(cuid())
   name         String
-  role         EmployeeRole
-  email        String       @unique
+  email        String   @unique
   passwordHash String
-  phone        String?
+  role         UserRole @default(User)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   orders       Order[]
-}
-
-model Category {
-  id           Int       @id @default(autoincrement())
-  name         String    @unique
-
-  products     Product[]
-}
-
-model Product {
-  id            Int        @id @default(autoincrement())
-  name          String
-  description   String?
-  price         Decimal
-  stockQuantity Int        @default(0)
-  imageUrl      String?
-  isAvailable   Boolean    @default(true)
-
-  categoryId    Int?
-  category      Category?  @relation(fields: [categoryId], references: [id])
-
-  cartItems     CartItem[]
-  orderItems    OrderItem[]
-}
-
-model CartItem {
-  id                   Int       @id @default(autoincrement())
-  customerId           Int
-  productId            Int
-  quantity             Int
-  dateAdded            DateTime  @default(now())
-  specialInstructions  String?
-
-  customer             Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  product              Product   @relation(fields: [productId], references: [id])
-}
-
-model RestaurantTable {
-  id          Int           @id @default(autoincrement())
-  tableNumber Int           @unique
-  capacity    Int
-  location    String?
-
   reservations Reservation[]
 }
 
 model Order {
-  id                  Int           @id @default(autoincrement())
-  customerId          Int
-  employeeId          Int?
-  orderDate           DateTime      @default(now())
-  totalAmount         Decimal
-  status              OrderStatus
-  paymentMethod       String
-  paymentStatus       PaymentStatus
-  paymentTransactionId String?
-  notificationStatus  String?
-  orderType           OrderType
-  deliveryAddress     String?
-  notes               String?
-  tableNumber         String?
+  id            String      @id @default(cuid())
+  userId        String?
+  status        OrderStatus @default(PendingPayment)
+  totalAmount   Decimal
+  currency      String      @default("RUB")
+  paymentMethod String
+  comment       String?
+  tableNumber   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  customer            Customer      @relation(fields: [customerId], references: [id])
-  employee            Employee?     @relation(fields: [employeeId], references: [id])
-  items               OrderItem[]
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  payment       Payment?
 }
 
 model OrderItem {
-  id          Int      @id @default(autoincrement())
-  orderId     Int
-  productId   Int
-  quantity    Int
-  priceAtTime Decimal
+  id        String   @id @default(cuid())
+  orderId   String
+  name      String
+  price     Decimal
+  quantity  Int
 
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product @relation(fields: [productId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Decimal
+  category    String
+  imageUrl    String
+
+  @@index([category])
+  @@index([name])
+}
+
+model Payment {
+  id               String         @id @default(cuid())
+  provider         PaymentProvider
+  status           PaymentStatus  @default(Pending)
+  orderId          String         @unique
+
+  // YooKassa payment id (object.id from API)
+  providerPaymentId String        @unique
+
+  // Persisted for safe retries / troubleshooting (does not contain card data)
+  confirmationUrl  String?
+
+  amount           Decimal
+  currency         String         @default("RUB")
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  webhookEvents    WebhookEvent[]
+}
+
+model WebhookEvent {
+  id          String          @id @default(cuid())
+  provider    PaymentProvider
+  event       String
+  paymentId   String
+
+  // Idempotency key computed by server (e.g. hash of paymentId + event + created_at)
+  dedupeKey   String          @unique
+
+  receivedAt  DateTime        @default(now())
+  payload     Json
+
+  payment     Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([provider, event])
 }
 
 model Reservation {
-  id               Int              @id @default(autoincrement())
-  customerId       Int
-  tableId          Int
-  reservationDate  DateTime
-  reservationTime  DateTime
-  durationMinutes  Int
-  numberOfGuests   Int
-  specialRequests  String?
-  status           ReservationStatus
-  notificationStatus String?
-  createdAt        DateTime         @default(now())
+  id        String            @id @default(cuid())
+  userId    String?
+  status    ReservationStatus @default(Pending)
 
-  customer         Customer         @relation(fields: [customerId], references: [id])
-  table            RestaurantTable  @relation(fields: [tableId], references: [id])
+  name      String
+  phone     String
+  startAt   DateTime
+  guests    Int
+  comment   String?
 
-  @@unique([tableId, reservationDate, reservationTime])
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([startAt])
+  @@index([phone])
 }
 
