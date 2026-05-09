@@ -21,7 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const authSubmitBtn = document.getElementById('authSubmitBtn');
   const changeUserBtn = document.getElementById('changeUserBtn');
 
-  const apiBase = window.BRODSKY_API_BASE || 'http://localhost:3000';
+  // API base:
+  // - On Render/production: use relative paths (same-origin).
+  // - If opened via file://, you can set window.BRODSKY_API_BASE manually.
+  const apiBase = window.BRODSKY_API_BASE
+    || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
 
   let csrfToken = null;
   async function ensureCsrfToken() {

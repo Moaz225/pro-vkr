@@ -293,8 +293,11 @@
   </div>
 
   <script>
-    // Если страницу открыли как file://, нужен явный адрес сервера
-    const API_BASE = window.MANAGER_API_BASE || 'http://localhost:3000';
+    // API base:
+    // - On Render/production: use same-origin (no hardcoded localhost).
+    // - If opened via file://, set window.MANAGER_API_BASE manually.
+    const API_BASE = window.MANAGER_API_BASE
+      || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
     const ORDERS_URL = API_BASE + '/api/orders';
     const RESERVATIONS_URL = API_BASE + '/api/reservations';
     const REFRESH_INTERVAL = 30000;
