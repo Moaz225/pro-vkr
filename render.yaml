@@ -13,8 +13,8 @@ services:
     branch: master
     autoDeploy: true
 
-    buildCommand: npm install && npx prisma migrate deploy --schema prisma/schema.prisma && npx prisma generate --schema prisma/schema.prisma
-    startCommand: node server/server.js
+    buildCommand: npm install && npx prisma generate --schema prisma/schema.prisma
+    startCommand: npx prisma migrate deploy --schema prisma/schema.prisma && node server/server.js
     healthCheckPath: /health
 
     envVars:
