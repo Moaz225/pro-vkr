@@ -51,6 +51,23 @@ enum ReservationStatus {
   Cancelled
 }
 
+enum CancelReason {
+  DELAY_OVER_30_MIN
+  WRONG_ORDER
+  PRODUCT_UNAVAILABLE
+  CUSTOMER_CHANGED_MIND
+  BAD_QUALITY
+  EMERGENCY
+  RESTAURANT_CLOSED
+}
+
+enum CancelStatus {
+  Pending
+  Approved
+  Rejected
+  AutoApproved
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -76,9 +93,22 @@ model Order {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
+  cancelReason           CancelReason?
+  cancelDescription      String?
+  cancelProofPath        String?
+  cancelStatus           CancelStatus?
+  cancelRequestedAt      DateTime?
+  cancelReviewedAt       DateTime?
+  cancelRejectionReason  String?
+  cancelAutoApproveAt    DateTime?
+  yookassaRefundId       String?
+
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   items         OrderItem[]
   payment       Payment?
+
+  @@index([cancelStatus, cancelRequestedAt])
+  @@index([cancelAutoApproveAt])
 }
 
 model OrderItem {

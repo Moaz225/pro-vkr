@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BRODSKY. — Запросы на отмену</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #f0f0f0; padding: 20px; }
+    .cx-page { max-width: 1200px; margin: 0 auto; }
+    .cx-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .cx-header h1 { color: var(--primary); font-size: 1.75rem; margin: 0; }
+    .cx-header a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cx-header a:hover { text-decoration: underline; }
+    .cx-denied { background: #fff3e0; border: 1px solid #ffcc80; padding: 16px; border-radius: 12px; color: #e65100; }
+    .cx-table-wrap { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    table.cx-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .cx-table th, .cx-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
+    .cx-table th { background: #fafafa; font-weight: 600; }
+    .cx-proof-thumb { max-width: 120px; max-height: 80px; border-radius: 6px; object-fit: cover; }
+    .cx-actions { display: flex; flex-direction: column; gap: 8px; min-width: 140px; }
+    .cx-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .85rem;
+    }
+    .cx-btn-ok { background: #2e7d32; color: #fff; }
+    .cx-btn-no { background: #c62828; color: #fff; }
+    .cx-reject-box { margin-top: 8px; display: none; }
+    .cx-reject-box.open { display: block; }
+    .cx-reject-box textarea { width: 100%; min-height: 64px; font: inherit; padding: 8px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+    .cx-error { color: #c62828; font-size: .9rem; margin: 8px 0; }
+    .cx-empty { text-align: center; padding: 40px; color: #666; }
+    .cx-refresh {
+      padding: 8px 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="cx-page">
+    <div class="cx-header">
+      <h1><i class="fas fa-undo-alt"></i> Запросы на отмену</h1>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <a href="manager.html"><i class="fas fa-chart-line"></i> Панель менеджера</a>
+        <a href="index.html"><i class="fas fa-home"></i> Меню</a>
+        <button type="button" class="cx-refresh" id="cxRefresh"><i class="fas fa-sync-alt"></i> Обновить</button>
+      </div>
+    </div>
+
+    <div id="cxDenied" class="cx-denied" hidden>
+      <p id="cxDeniedTitle"><strong>Нет доступа.</strong> Эта страница только для аккаунта с ролью менеджера.</p>
+      <p id="cxDeniedHint" style="margin:8px 0 0;font-size:.9rem;">Назначьте роль <code>Manager</code> пользователю в базе (Prisma / SQL) или войдите под менеджером.</p>
+      <p style="margin:8px 0 0;"><a href="index.html">Перейти в меню</a></p>
+    </div>
+
+    <p id="cxError" class="cx-error" hidden></p>
+
+    <div id="cxMain" hidden>
+      <div class="cx-table-wrap">
+        <table class="cx-table">
+          <thead>
+            <tr>
+              <th>Заказ</th>
+              <th>Клиент</th>
+              <th>Причина / текст</th>
+              <th>Доказательство</th>
+              <th>Срок авто</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cxBody"></tbody>
+        </table>
+      </div>
+      <div id="cxEmpty" class="cx-empty" hidden>Нет заявок в ожидании.</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.BRODSKY_CANCELLATIONS_API_BASE
+      || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
+
+    const REASON_LABEL = {
+      DELAY_OVER_30_MIN: 'Задержка >30 мин',
+      WRONG_ORDER: 'Неверный заказ',
+      PRODUCT_UNAVAILABLE: 'Нет товара',
+      CUSTOMER_CHANGED_MIND: 'Передумал',
+      BAD_QUALITY: 'Качество',
+      EMERGENCY: 'Чрезвычайная ситуация',
+      RESTAURANT_CLOSED: 'Закрыто'
+    };
+
+    let csrfToken = null;
+    async function ensureCsrfToken() {
+      if (csrfToken) return csrfToken;
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.csrfToken) throw new Error('CSRF');
+      csrfToken = data.csrfToken;
+      return csrfToken;
+    }
+
+    const cxDenied = document.getElementById('cxDenied');
+    const cxDeniedTitle = document.getElementById('cxDeniedTitle');
+    const cxDeniedHint = document.getElementById('cxDeniedHint');
+    const cxMain = document.getElementById('cxMain');
+    const cxBody = document.getElementById('cxBody');
+    const cxEmpty = document.getElementById('cxEmpty');
+    const cxError = document.getElementById('cxError');
+    const cxRefresh = document.getElementById('cxRefresh');
+
+    function isImageProof(path) {
+      return /\.(jpe?g|png|webp)$/i.test(path || '');
+    }
+
+    function proofCell(row) {
+      const p = row.proofPath;
+      if (!p) return '—';
+      const url = API_BASE + p;
+      if (isImageProof(p)) {
+        return '<a href="' + url + '" target="_blank" rel="noopener"><img class="cx-proof-thumb" src="' + url + '" alt=""></a>';
+      }
+      return '<a href="' + url + '" target="_blank" rel="noopener">PDF / файл</a>';
+    }
+
+    function renderRows(rows) {
+      cxBody.innerHTML = '';
+      if (!rows.length) {
+        cxEmpty.hidden = false;
+        return;
+      }
+      cxEmpty.hidden = true;
+
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        const reason = REASON_LABEL[r.reason] || r.reason;
+        const desc = escapeHtml(r.description || '—');
+        const autoAt = r.autoApproveAt ? new Date(r.autoApproveAt).toLocaleString() : '—';
+        const oid = escapeHtml(r.orderId);
+        tr.innerHTML =
+          '<td><code>' + oid + '</code><br><small>' + Number(r.total).toFixed(2) + ' ₽</small></td>'
+          + '<td>' + escapeHtml(r.customerName) + '<br><small>' + escapeHtml(r.customerEmail) + '</small></td>'
+          + '<td><strong>' + escapeHtml(reason) + '</strong><br><span style="color:#555">' + desc + '</span></td>'
+          + '<td>' + proofCell(r) + '</td>'
+          + '<td><small>' + autoAt + '</small></td>'
+          + '<td><div class="cx-actions">'
+          + '<button type="button" class="cx-btn cx-btn-ok" data-act="approve" data-id="' + oid + '"><i class="fas fa-check"></i> Одобрить</button>'
+          + '<button type="button" class="cx-btn cx-btn-no" data-act="reject-open" data-id="' + oid + '"><i class="fas fa-times"></i> Отклонить</button>'
+          + '<div class="cx-reject-box" id="rj-' + oid + '"><textarea placeholder="Причина отказа (обязательно)"></textarea>'
+          + '<button type="button" class="cx-btn cx-btn-no" data-act="reject-send" data-id="' + oid + '" style="margin-top:6px;width:100%">Отправить отказ</button></div>'
+          + '</div></td>';
+        cxBody.appendChild(tr);
+      }
+
+      cxBody.querySelectorAll('[data-act="approve"]').forEach((b) => {
+        b.addEventListener('click', () => doApprove(b.getAttribute('data-id')));
+      });
+      cxBody.querySelectorAll('[data-act="reject-open"]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-id');
+          const box = document.getElementById('rj-' + id);
+          box.classList.toggle('open');
+        });
+      });
+      cxBody.querySelectorAll('[data-act="reject-send"]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const id = b.getAttribute('data-id');
+          const box = document.getElementById('rj-' + id);
+          const ta = box.querySelector('textarea');
+          doReject(id, ta.value.trim());
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function doApprove(orderId) {
+      cxError.hidden = true;
+      try {
+        const token = await ensureCsrfToken();
+        const res = await fetch(API_BASE + '/api/cancellations/' + encodeURIComponent(orderId) + '/approve', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+          body: '{}'
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          cxError.textContent = (data && data.error) || 'Ошибка одобрения';
+          cxError.hidden = false;
+          return;
+        }
+        await loadPending();
+      } catch (e) {
+        cxError.textContent = e.message || 'Сеть';
+        cxError.hidden = false;
+      }
+    }
+
+    async function doReject(orderId, reason) {
+      if (!reason) {
+        cxError.textContent = 'Укажите причину отказа';
+        cxError.hidden = false;
+        return;
+      }
+      cxError.hidden = true;
+      try {
+        const token = await ensureCsrfToken();
+        const res = await fetch(API_BASE + '/api/cancellations/' + encodeURIComponent(orderId) + '/reject', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+          body: JSON.stringify({ rejectionReason: reason })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          cxError.textContent = (data && data.error) || 'Ошибка';
+          cxError.hidden = false;
+          return;
+        }
+        await loadPending();
+      } catch (e) {
+        cxError.textContent = e.message || 'Сеть';
+        cxError.hidden = false;
+      }
+    }
+
+    async function loadPending() {
+      cxError.hidden = true;
+      const res = await fetch(API_BASE + '/api/cancellations/pending', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403) {
+        cxDenied.hidden = false;
+        cxDeniedTitle.innerHTML = '<strong>Нет доступа.</strong> Нужна роль менеджера.';
+        cxDeniedHint.hidden = false;
+        cxMain.hidden = true;
+        return;
+      }
+      if (!res.ok || !data.success) {
+        cxError.textContent = (data && data.error) || 'Не удалось загрузить список';
+        cxError.hidden = false;
+        return;
+      }
+      cxDenied.hidden = true;
+      cxMain.hidden = false;
+      renderRows(data.cancellations || []);
+    }
+
+    async function init() {
+      if (!API_BASE) {
+        cxError.textContent = 'Откройте через http:// с сервера';
+        cxError.hidden = false;
+        return;
+      }
+      const meRes = await fetch(API_BASE + '/api/auth/me', { credentials: 'include' });
+      if (!meRes.ok) {
+        cxDenied.hidden = false;
+        cxDeniedTitle.innerHTML = '<strong>Не выполнен вход.</strong> Откройте меню и войдите в аккаунт.';
+        cxDeniedHint.hidden = true;
+        cxMain.hidden = true;
+        return;
+      }
+      cxDeniedHint.hidden = false;
+      const me = await meRes.json().catch(() => ({}));
+      if (!me.user || me.user.role !== 'manager') {
+        cxDenied.hidden = false;
+        cxDeniedTitle.innerHTML = '<strong>Нет доступа.</strong> Нужна роль менеджера.';
+        cxMain.hidden = true;
+        return;
+      }
+      await loadPending();
+    }
+
+    cxRefresh.addEventListener('click', () => loadPending());
+    init();
+  </script>
+</body>
+</html>

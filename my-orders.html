@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BRODSKY. — Мои заказы</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: #f0f0f0; padding: 20px; }
+    .mo-page { max-width: 900px; margin: 0 auto; }
+    .mo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .mo-header h1 { color: var(--primary); font-size: 1.75rem; margin: 0; }
+    .mo-header a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mo-header a:hover { text-decoration: underline; }
+    .mo-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .mo-card h2 { font-size: 1.05rem; margin: 0 0 10px; color: #222; }
+    .mo-created-meta { font-size: .85rem; color: #555; line-height: 1.45; margin-bottom: 8px; }
+    .mo-created-meta strong { font-weight: 600; color: #333; }
+    .mo-meta { font-size: .9rem; color: #555; line-height: 1.5; }
+    .mo-status { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; background: #eee; color: #333; }
+    .mo-status.pending { background: #fff3e0; color: #e65100; }
+    .mo-status.new { background: #e3f2fd; color: #1565c0; }
+    .mo-status.in_progress { background: #f3e5f5; color: #6a1b9a; }
+    .mo-status.done { background: #e8f5e9; color: #2e7d32; }
+    .mo-status.cancelled { background: #ffebee; color: #c62828; }
+    .mo-actions { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .mo-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .9rem;
+      background: var(--primary);
+      color: #fff;
+    }
+    .mo-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .mo-btn-secondary { background: #444; }
+    .mo-error { color: #c62828; font-size: .95rem; margin: 8px 0; }
+    .mo-empty { text-align: center; padding: 40px 20px; color: #666; }
+    .mo-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      display: none; align-items: center; justify-content: center; z-index: 2000;
+      padding: 16px;
+    }
+    .mo-overlay.open { display: flex; }
+    .mo-modal {
+      background: #fff;
+      border-radius: 14px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: auto;
+      padding: 22px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.2);
+    }
+    .mo-modal h3 { margin: 0 0 14px; font-size: 1.2rem; }
+    .mo-field { margin-bottom: 14px; }
+    .mo-field label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 6px; color: #333; }
+    .mo-field select, .mo-field textarea, .mo-field input[type="file"] {
+      width: 100%; font: inherit; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;
+    }
+    .mo-field textarea { min-height: 88px; resize: vertical; }
+    .mo-req { color: #c62828; font-weight: 700; }
+    .mo-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <div class="mo-page">
+    <div class="mo-header">
+      <h1><i class="fas fa-receipt"></i> Мои заказы</h1>
+      <a href="index.html"><i class="fas fa-arrow-left"></i> К меню</a>
+    </div>
+    <p id="moAuthMsg" class="mo-error" hidden></p>
+    <div id="moList" class="orders-list"></div>
+    <div id="moEmpty" class="mo-empty" hidden>
+      <p>Заказов пока нет.</p>
+      <p style="font-size:.9rem;">Оформите заказ в меню — он появится здесь после входа в аккаунт.</p>
+    </div>
+  </div>
+
+  <div id="moOverlay" class="mo-overlay" role="dialog" aria-modal="true" aria-labelledby="moModalTitle">
+    <div class="mo-modal">
+      <h3 id="moModalTitle">Отмена заказа</h3>
+      <p id="moModalOrder" style="font-size:.9rem;color:#666;margin:0 0 12px;"></p>
+      <form id="moCancelForm">
+        <div class="mo-field">
+          <label for="moReason">Причина</label>
+          <select id="moReason" required>
+            <option value="">Выберите…</option>
+            <option value="DELAY_OVER_30_MIN">Задержка более 30 минут</option>
+            <option value="WRONG_ORDER">Неверный заказ</option>
+            <option value="PRODUCT_UNAVAILABLE">Нет товара / блюда</option>
+            <option value="CUSTOMER_CHANGED_MIND">Клиент передумал</option>
+            <option value="BAD_QUALITY">Плохое качество <span class="mo-req">*</span></option>
+            <option value="EMERGENCY">Чрезвычайная ситуация <span class="mo-req">*</span></option>
+            <option value="RESTAURANT_CLOSED">Заведение закрыто</option>
+          </select>
+        </div>
+        <div class="mo-field">
+          <label for="moDesc">Комментарий (необязательно)</label>
+          <textarea id="moDesc" placeholder="Детали по желанию"></textarea>
+        </div>
+        <div class="mo-field">
+          <label for="moProof">Файл подтверждения (фото или PDF, до 2 МБ) <span id="moProofReq" class="mo-req" hidden>*</span></label>
+          <input type="file" id="moProof" accept="image/jpeg,image/png,image/webp,application/pdf">
+          <p id="moProofHint" style="font-size:.8rem;color:#666;margin:6px 0 0;">Для «Плохое качество» и «Чрезвычайная ситуация» файл обязателен.</p>
+        </div>
+        <p id="moFormError" class="mo-error" hidden></p>
+        <div class="mo-modal-actions">
+          <button type="button" class="mo-btn mo-btn-secondary" id="moCancelClose">Закрыть</button>
+          <button type="submit" class="mo-btn" id="moSubmit"><i class="fas fa-paper-plane"></i> Отправить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.BRODSKY_MY_ORDERS_API_BASE
+      || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
+
+    const PROOF_REASONS = new Set(['BAD_QUALITY', 'EMERGENCY']);
+    const CANCELLABLE = new Set(['pending', 'new', 'in_progress']);
+
+    const REASON_LABEL = {
+      DELAY_OVER_30_MIN: 'Задержка более 30 минут',
+      WRONG_ORDER: 'Неверный заказ',
+      PRODUCT_UNAVAILABLE: 'Нет товара',
+      CUSTOMER_CHANGED_MIND: 'Передумал(а)',
+      BAD_QUALITY: 'Плохое качество',
+      EMERGENCY: 'Чрезвычайная ситуация',
+      RESTAURANT_CLOSED: 'Заведение закрыто'
+    };
+
+    let csrfToken = null;
+    async function ensureCsrfToken() {
+      if (csrfToken) return csrfToken;
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.csrfToken) throw new Error('Не удалось получить CSRF');
+      csrfToken = data.csrfToken;
+      return csrfToken;
+    }
+
+    const moAuthMsg = document.getElementById('moAuthMsg');
+    const moList = document.getElementById('moList');
+    const moEmpty = document.getElementById('moEmpty');
+    const moOverlay = document.getElementById('moOverlay');
+    const moModalOrder = document.getElementById('moModalOrder');
+    const moReason = document.getElementById('moReason');
+    const moDesc = document.getElementById('moDesc');
+    const moProof = document.getElementById('moProof');
+    const moProofReq = document.getElementById('moProofReq');
+    const moFormError = document.getElementById('moFormError');
+    const moCancelForm = document.getElementById('moCancelForm');
+    const moCancelClose = document.getElementById('moCancelClose');
+    const moSubmit = document.getElementById('moSubmit');
+
+    let cancelTargetId = null;
+
+    function statusLabel(st) {
+      const m = {
+        pending: 'Ожидает оплаты',
+        new: 'Новый',
+        in_progress: 'Готовится',
+        done: 'Готов',
+        cancelled: 'Отменён'
+      };
+      return m[st] || st;
+    }
+
+    function cancelStatusLabel(cs) {
+      const m = {
+        pending: 'Отмена на рассмотрении',
+        approved: 'Отмена одобрена',
+        auto_approved: 'Отмена одобрена (авто)',
+        rejected: 'В отмене отказано'
+      };
+      return m[cs] || (cs || '');
+    }
+
+    function formatOrderDateRu(iso) {
+      try {
+        const d = new Date(iso);
+        if (!Number.isFinite(d.getTime())) return '—';
+        return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+      } catch (_) { return '—'; }
+    }
+
+    function formatOrderTimeRu24(iso) {
+      try {
+        const d = new Date(iso);
+        if (!Number.isFinite(d.getTime())) return '—';
+        return new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+      } catch (_) { return '—'; }
+    }
+
+    function formatExactCreatedAt(iso) {
+      try {
+        const d = new Date(iso);
+        if (!Number.isFinite(d.getTime())) return '—';
+        return d.toISOString();
+      } catch (_) { return '—'; }
+    }
+
+    function orderCreatedMetaMo(iso) {
+      const exact = escapeHtml(formatExactCreatedAt(iso));
+      return (
+        '<div class="mo-created-meta">'
+        + '<div><strong>Дата:</strong> ' + escapeHtml(formatOrderDateRu(iso)) + '</div>'
+        + '<div><strong>Время:</strong> ' + escapeHtml(formatOrderTimeRu24(iso)) + '</div>'
+        + '<div><strong>Точное время создания:</strong> <code>' + exact + '</code></div>'
+        + '</div>'
+      );
+    }
+
+    function updateProofUi() {
+      const r = moReason.value;
+      const need = PROOF_REASONS.has(r);
+      moProofReq.hidden = !need;
+      moProof.required = need;
+    }
+
+    moReason.addEventListener('change', updateProofUi);
+
+    function openModal(orderId) {
+      cancelTargetId = orderId;
+      moModalOrder.textContent = 'Заказ #' + orderId;
+      moReason.value = '';
+      moDesc.value = '';
+      moProof.value = '';
+      moFormError.hidden = true;
+      updateProofUi();
+      moOverlay.classList.add('open');
+    }
+
+    function closeModal() {
+      moOverlay.classList.remove('open');
+      cancelTargetId = null;
+    }
+
+    moCancelClose.addEventListener('click', closeModal);
+    moOverlay.addEventListener('click', (e) => { if (e.target === moOverlay) closeModal(); });
+
+    moCancelForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      moFormError.hidden = true;
+      if (!cancelTargetId) return;
+      const reason = moReason.value;
+      if (!reason) {
+        moFormError.textContent = 'Выберите причину';
+        moFormError.hidden = false;
+        return;
+      }
+      if (PROOF_REASONS.has(reason) && (!moProof.files || !moProof.files.length)) {
+        moFormError.textContent = 'Для этой причины нужен файл подтверждения';
+        moFormError.hidden = false;
+        return;
+      }
+
+      moSubmit.disabled = true;
+      try {
+        const token = await ensureCsrfToken();
+        const fd = new FormData();
+        fd.append('reason', reason);
+        fd.append('description', moDesc.value.trim());
+        if (moProof.files && moProof.files[0]) fd.append('proof', moProof.files[0]);
+
+        const res = await fetch(API_BASE + '/api/orders/' + encodeURIComponent(cancelTargetId) + '/cancel', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-CSRF-Token': token },
+          body: fd
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          moFormError.textContent = (data && data.error) || 'Не удалось отправить запрос';
+          moFormError.hidden = false;
+          return;
+        }
+        closeModal();
+        await loadOrders();
+      } catch (err) {
+        moFormError.textContent = err.message || 'Ошибка сети';
+        moFormError.hidden = false;
+      } finally {
+        moSubmit.disabled = false;
+      }
+    });
+
+    function renderOrders(orders) {
+      moList.innerHTML = '';
+      if (!orders.length) {
+        moEmpty.hidden = false;
+        return;
+      }
+      moEmpty.hidden = true;
+
+      for (const o of orders) {
+        const card = document.createElement('div');
+        card.className = 'mo-card';
+        const st = o.status || 'pending';
+        const pay = o.payment;
+        const payLine = pay
+          ? ('Оплата: ' + (pay.paymentStatus || '—') + (pay.paymentId ? ' · YooKassa' : ''))
+          : 'Оплата: —';
+
+        const c = o.cancellation || {};
+        const cancelBlock = c.status
+          ? ('<p class="mo-meta"><strong>Отмена:</strong> ' + cancelStatusLabel(c.status)
+            + (c.reason ? ' · ' + (REASON_LABEL[c.reason] || c.reason) : '')
+            + (c.autoApproveAt && c.status === 'pending' ? '<br>Авто-решение до: ' + new Date(c.autoApproveAt).toLocaleString() : '')
+            + '</p>')
+          : '';
+
+        const canCancel = CANCELLABLE.has(st) && c.status !== 'pending';
+        const btn = canCancel
+          ? '<button type="button" class="mo-btn cancel-btn" data-id="' + o.orderId + '"><i class="fas fa-times-circle"></i> Отменить заказ</button>'
+          : '';
+
+        card.innerHTML =
+          '<h2>Заказ <code>' + escapeHtml(String(o.orderId)) + '</code></h2>'
+          + orderCreatedMetaMo(o.createdAt)
+          + '<p><span class="mo-status ' + st + '">' + statusLabel(st) + '</span></p>'
+          + '<p class="mo-meta">Сумма: ' + o.total + ' ₽ · ' + payLine + '</p>'
+          + (o.comment ? '<p class="mo-meta">Комментарий: ' + escapeHtml(o.comment) + '</p>' : '')
+          + cancelBlock
+          + '<div class="mo-actions">' + btn + '</div>';
+
+        moList.appendChild(card);
+      }
+
+      moList.querySelectorAll('.cancel-btn').forEach((b) => {
+        b.addEventListener('click', () => openModal(b.getAttribute('data-id')));
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function loadOrders() {
+      moAuthMsg.hidden = true;
+      if (!API_BASE) {
+        moAuthMsg.textContent = 'Откройте страницу через сервер (http://localhost:…), не через file://';
+        moAuthMsg.hidden = false;
+        return;
+      }
+
+      const meRes = await fetch(API_BASE + '/api/auth/me', { credentials: 'include' });
+      if (!meRes.ok) {
+        moAuthMsg.textContent = 'Войдите в аккаунт на странице меню, чтобы видеть заказы.';
+        moAuthMsg.hidden = false;
+        moList.innerHTML = '';
+        moEmpty.hidden = true;
+        return;
+      }
+
+      const res = await fetch(API_BASE + '/api/me/orders', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        moAuthMsg.textContent = (data && data.error) || 'Не удалось загрузить заказы';
+        moAuthMsg.hidden = false;
+        return;
+      }
+      renderOrders(data.orders || []);
+    }
+
+    loadOrders();
+  </script>
+</body>
+</html>

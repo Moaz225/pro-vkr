@@ -9,6 +9,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const dotenv = require('dotenv');
 const { PrismaClient } = require('@prisma/client');
@@ -19,6 +20,8 @@ const session = require('express-session');
 const csrf = require('csurf');
 const pg = require('pg');
 const PgSession = require('connect-pg-simple')(session);
+const { createMailer } = require('./mail');
+const { registerCancellationRoutes } = require('./cancellation-routes');
 
 const app = express();
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -150,6 +153,7 @@ app.use((err, req, res, next) => {
 
 // Раздача страниц меню и заказов для персонала (index.html, staff-orders.html, style.css, script.js)
 app.use(express.static(PUBLIC_DIR));
+app.use('/uploads', express.static(path.join(PUBLIC_DIR, 'public', 'uploads')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
@@ -157,7 +161,10 @@ app.get('/', (req, res) => {
 // В упрощённой версии проекта столики не хранятся в БД,
 // поэтому инициализация RestaurantTable не требуется.
 async function ensureDefaultTables() {
-  return;
+  const uploadsDir = path.join(PUBLIC_DIR, 'public', 'uploads', 'cancellations');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
 }
 
 function makePasswordHash(password) {
@@ -211,6 +218,13 @@ function mapApiStatusToOrderStatus(s) {
   if (v === 'done') return 'Done';
   if (v === 'cancelled') return 'Cancelled';
   return null;
+}
+
+function mapPrismaRoleToApi(role) {
+  const r = String(role || '');
+  if (r === 'Manager') return 'manager';
+  if (r === 'Staff') return 'staff';
+  return 'user';
 }
 
 function mapReservationStatusToApi(s) {
@@ -290,7 +304,12 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 
     res.json({
       success: true,
-      user: { id: String(user.id), name: user.name, email: user.email, role: 'user' }
+      user: {
+        id: String(user.id),
+        name: user.name,
+        email: user.email,
+        role: mapPrismaRoleToApi(user.role)
+      }
     });
   } catch (err) {
     console.error('Ошибка регистрации:', err);
@@ -318,7 +337,12 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
     res.json({
       success: true,
-      user: { id: String(user.id), name: user.name, email: user.email, role: 'user' }
+      user: {
+        id: String(user.id),
+        name: user.name,
+        email: user.email,
+        role: mapPrismaRoleToApi(user.role)
+      }
     });
   } catch (err) {
     console.error('Ошибка входа:', err);
@@ -340,7 +364,12 @@ app.get('/api/auth/me', (req, res) => {
       }
       res.json({
         success: true,
-        user: { id: String(user.id), name: user.name, email: user.email, role: 'user' }
+        user: {
+          id: String(user.id),
+          name: user.name,
+          email: user.email,
+          role: mapPrismaRoleToApi(user.role)
+        }
       });
     })
     .catch((err) => {
@@ -479,6 +508,57 @@ app.get('/api/orders', async (req, res) => {
     res.json({ orders });
   } catch (err) {
     console.error('Ошибка при получении заказов:', err);
+    res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+/**
+ * Aggregate orders created in [from, to] (ISO timestamps).
+ * - orderCount: all orders in window
+ * - totalRevenue / averageOrderValue: only orders with status !== Cancelled
+ */
+app.get('/api/orders/shift-summary', async (req, res) => {
+  try {
+    const fromRaw = req.query.from;
+    const toRaw = req.query.to;
+    if (!fromRaw || !toRaw) {
+      return res.status(400).json({ success: false, error: 'Укажите параметры from и to (ISO дата/время)' });
+    }
+    let fromDate = parseIsoDate(fromRaw);
+    let toDate = parseIsoDate(toRaw);
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ success: false, error: 'Некорректный формат from или to' });
+    }
+    if (fromDate.getTime() > toDate.getTime()) {
+      const swap = fromDate;
+      fromDate = toDate;
+      toDate = swap;
+    }
+
+    const rows = await prisma.order.findMany({
+      where: { createdAt: { gte: fromDate, lte: toDate } },
+      select: { totalAmount: true, status: true }
+    });
+
+    const orderCount = rows.length;
+    const revenueRows = rows.filter((r) => r.status !== 'Cancelled');
+    const revenueOrderCount = revenueRows.length;
+    const totalRevenue = revenueRows.reduce((sum, r) => sum + Number(r.totalAmount), 0);
+    const averageOrderValue = revenueOrderCount === 0 ? 0 : totalRevenue / revenueOrderCount;
+
+    res.json({
+      success: true,
+      summary: {
+        from: fromDate.toISOString(),
+        to: toDate.toISOString(),
+        orderCount,
+        revenueOrderCount,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        averageOrderValue: Math.round(averageOrderValue * 100) / 100
+      }
+    });
+  } catch (err) {
+    console.error('GET /api/orders/shift-summary:', err);
     res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
   }
 });
@@ -666,6 +746,18 @@ async function verifyAndUpdateOrderFromYooKassa({ orderId, paymentId }) {
 
   return await prisma.order.findUnique({ where: { id: order.id }, include: { payment: true } });
 }
+
+const { startAutoApproveTimer } = registerCancellationRoutes(app, {
+  prisma,
+  env,
+  csrfProtection,
+  getSessionUserId,
+  mapOrderStatusToApi,
+  yookassaRequest,
+  createMailer,
+  rateLimit,
+  publicDir: PUBLIC_DIR
+});
 
 // Create YooKassa payment and return redirect confirmation URL
 const paymentCreateLimiter = rateLimit({
@@ -1056,6 +1148,7 @@ async function start() {
     // Required when running behind ngrok / reverse proxy for correct client IP detection.
     app.set('trust proxy', 1);
   }
+  startAutoApproveTimer();
 app.listen(PORT, () => {
   console.log(`Server running on port: ${PORT}`);
   console.log(`Environment: ${env.nodeEnv}`);

@@ -95,6 +95,71 @@
     }
     .order-id { font-weight: 700; font-size: 1.1rem; color: var(--dark); }
     .order-time { font-size: .9rem; color: #666; }
+    .order-created-meta {
+      font-size: .85rem;
+      color: #555;
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+    .order-created-meta strong { font-weight: 600; color: #333; }
+    .staff-shift-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.08);
+    }
+    .shift-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: .95rem;
+      font-weight: 500;
+      background: var(--primary);
+      color: #fff;
+    }
+    .shift-btn:hover { background: var(--primary-dark); }
+    .shift-btn.secondary { background: #555; }
+    .shift-btn.secondary:hover { filter: brightness(1.08); }
+    .shift-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .shift-timer-wrap { font-size: .95rem; color: #333; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .shift-timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--primary-dark); }
+    .staff-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 2500;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .staff-modal-overlay.open { display: flex; }
+    .staff-modal-box {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 440px;
+      width: 100%;
+      padding: 22px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.2);
+    }
+    .staff-modal-box h3 { margin: 0 0 14px; font-size: 1.15rem; color: var(--dark); }
+    .staff-modal-box .shift-summary-lines { font-size: .95rem; line-height: 1.65; color: #333; }
+    .staff-modal-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+    @media print {
+      body * { visibility: hidden !important; }
+      #shiftSummaryPrintArea, #shiftSummaryPrintArea * { visibility: visible !important; }
+      #shiftSummaryPrintArea { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; box-shadow: none !important; }
+      #shiftSummaryPrintArea .staff-modal-actions { display: none !important; }
+    }
     .order-status {
       padding: 4px 12px;
       border-radius: 999px;
@@ -144,6 +209,7 @@
       </div>
       <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
         <a href="index.html"><i class="fas fa-arrow-left"></i> Меню для гостей</a>
+        <a href="cancellations.html" title="Доступно только менеджерам"><i class="fas fa-undo-alt"></i> Запросы на отмену</a>
         <div class="sound-controls">
           <button type="button" class="sound-btn" id="btnSound" aria-label="Звуковые уведомления">
             <i class="fas fa-volume-high"></i> Звук: выкл
@@ -157,6 +223,15 @@
           <i class="fas fa-sync-alt"></i> Обновить
         </button>
       </div>
+    </div>
+
+    <div class="staff-shift-bar" aria-label="Смена">
+      <button type="button" class="shift-btn" id="btnShiftStart"><i class="fas fa-play-circle"></i> Начать смену</button>
+      <div class="shift-timer-wrap" id="shiftActiveBlock" hidden>
+        <span>Текущая смена:</span>
+        <span class="shift-timer" id="shiftTimerDisplay">00:00:00</span>
+      </div>
+      <button type="button" class="shift-btn secondary" id="btnShiftEnd" hidden><i class="fas fa-stop-circle"></i> Закрыть смену</button>
     </div>
 
     <div id="staffError" class="staff-error" hidden></div>
@@ -179,6 +254,18 @@
       <div id="reservationsEmpty" class="staff-empty" hidden>
         <p>Пока нет бронирований.</p>
         <p style="font-size: .9rem;">Новые бронирования появятся здесь после заполнения формы на странице меню.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="staffShiftSummaryModal" class="staff-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="shiftSummaryTitle">
+    <div class="staff-modal-box shift-summary-print-area" id="shiftSummaryPrintArea">
+      <h3 id="shiftSummaryTitle">Итоги смены</h3>
+      <div class="shift-summary-lines" id="shiftSummaryBody"></div>
+      <div class="staff-modal-actions">
+        <button type="button" class="shift-btn secondary" id="btnShiftSummaryCopy"><i class="fas fa-copy"></i> Скопировать отчёт</button>
+        <button type="button" class="shift-btn secondary" id="btnShiftSummaryPrint"><i class="fas fa-print"></i> Печать</button>
+        <button type="button" class="shift-btn" id="btnShiftSummaryDone"><i class="fas fa-check"></i> Готово</button>
       </div>
     </div>
   </div>
@@ -331,12 +418,196 @@
       }[status] || status;
     }
 
-    function formatTime(iso) {
+    function formatOrderDateRu(iso) {
       try {
         const d = new Date(iso);
-        return d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
-      } catch (_) { return iso; }
+        if (!Number.isFinite(d.getTime())) return '—';
+        return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+      } catch (_) { return '—'; }
     }
+
+    function formatOrderTimeRu24(iso) {
+      try {
+        const d = new Date(iso);
+        if (!Number.isFinite(d.getTime())) return '—';
+        return new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+      } catch (_) { return '—'; }
+    }
+
+    function formatExactCreatedAt(iso) {
+      try {
+        const d = new Date(iso);
+        if (!Number.isFinite(d.getTime())) return '—';
+        return d.toISOString();
+      } catch (_) { return '—'; }
+    }
+
+    function orderCreatedMetaStaff(iso) {
+      const exact = escapeHtml(formatExactCreatedAt(iso));
+      return (
+        `<div class="order-created-meta">
+          <div><strong>Дата:</strong> ${escapeHtml(formatOrderDateRu(iso))}</div>
+          <div><strong>Время:</strong> ${escapeHtml(formatOrderTimeRu24(iso))}</div>
+          <div><strong>Точное время создания:</strong> <code>${exact}</code></div>
+        </div>`
+      );
+    }
+
+    const SHIFT_STORAGE_KEY = 'brodsky_shift_start_iso';
+    const btnShiftStart = document.getElementById('btnShiftStart');
+    const btnShiftEnd = document.getElementById('btnShiftEnd');
+    const shiftActiveBlock = document.getElementById('shiftActiveBlock');
+    const shiftTimerDisplay = document.getElementById('shiftTimerDisplay');
+    const shiftSummaryModal = document.getElementById('staffShiftSummaryModal');
+    const shiftSummaryBody = document.getElementById('shiftSummaryBody');
+    let shiftTimerInterval = null;
+    let lastShiftReportText = '';
+
+    function getShiftStartIso() {
+      try {
+        const v = localStorage.getItem(SHIFT_STORAGE_KEY);
+        return v && v.trim() ? v.trim() : null;
+      } catch (_) { return null; }
+    }
+
+    function formatElapsedHms(ms) {
+      const sec = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':');
+    }
+
+    function updateShiftTimerDisplay() {
+      const startIso = getShiftStartIso();
+      if (!startIso || !shiftTimerDisplay) return;
+      const t0 = new Date(startIso).getTime();
+      if (!Number.isFinite(t0)) return;
+      shiftTimerDisplay.textContent = formatElapsedHms(Date.now() - t0);
+    }
+
+    function applyShiftUi() {
+      const active = Boolean(getShiftStartIso());
+      if (btnShiftStart) btnShiftStart.hidden = active;
+      if (btnShiftEnd) btnShiftEnd.hidden = !active;
+      if (shiftActiveBlock) shiftActiveBlock.hidden = !active;
+      if (shiftTimerInterval) {
+        clearInterval(shiftTimerInterval);
+        shiftTimerInterval = null;
+      }
+      if (active) {
+        updateShiftTimerDisplay();
+        shiftTimerInterval = setInterval(updateShiftTimerDisplay, 1000);
+      }
+    }
+
+    function formatRub(n) {
+      const x = typeof n === 'number' ? n : parseFloat(String(n));
+      const dec = Number.isFinite(x) ? x.toFixed(2) : '0.00';
+      const [intPart, frac] = dec.split('.');
+      const intSpaced = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return intSpaced + ',' + frac + ' ₽';
+    }
+
+    function shiftSummaryHumanLines(summary) {
+      const from = new Date(summary.from);
+      const to = new Date(summary.to);
+      const interval =
+        `<p><strong>Интервал смены</strong></p>`
+        + `<p>С: ${escapeHtml(from.toLocaleString('ru-RU'))}</p>`
+        + `<p>По: ${escapeHtml(to.toLocaleString('ru-RU'))}</p>`;
+      const stats =
+        `<p><strong>Итого заказов:</strong> ${summary.orderCount}</p>`
+        + `<p><strong>Выручка:</strong> ${escapeHtml(formatRub(summary.totalRevenue))}</p>`
+        + `<p><strong>Средний чек:</strong> ${escapeHtml(formatRub(summary.averageOrderValue))}</p>`
+        + (typeof summary.revenueOrderCount === 'number'
+          ? `<p style="font-size:.85rem;color:#666">В расчёте выручки: ${summary.revenueOrderCount} заказ(ов) (без отменённых)</p>`
+          : '');
+      return interval + stats;
+    }
+
+    function buildShiftReportPlain(summary) {
+      const from = new Date(summary.from);
+      const to = new Date(summary.to);
+      return [
+        'BRODSKY — итоги смены',
+        'С: ' + from.toISOString(),
+        'По: ' + to.toISOString(),
+        'Итого заказов: ' + summary.orderCount,
+        'Выручка (без отменённых): ' + formatRub(summary.totalRevenue),
+        'Средний чек: ' + formatRub(summary.averageOrderValue)
+      ].join('\n');
+    }
+
+    if (btnShiftStart) {
+      btnShiftStart.addEventListener('click', () => {
+        try {
+          localStorage.setItem(SHIFT_STORAGE_KEY, new Date().toISOString());
+        } catch (e) {
+          showError('Не удалось сохранить начало смены: ' + e.message);
+          return;
+        }
+        hideError();
+        applyShiftUi();
+      });
+    }
+
+    if (btnShiftEnd) {
+      btnShiftEnd.addEventListener('click', async () => {
+        const fromIso = getShiftStartIso();
+        if (!fromIso) return;
+        if (!confirm('Закрыть смену? Вы уверены?')) return;
+        if (!API_BASE) {
+          showError('Нет адреса API (откройте страницу через http://).');
+          return;
+        }
+        const toIso = new Date().toISOString();
+        try {
+          const url = API_BASE + '/api/orders/shift-summary?from=' + encodeURIComponent(fromIso) + '&to=' + encodeURIComponent(toIso);
+          const res = await fetch(url);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success || !data.summary) {
+            showError((data && data.error) || 'Не удалось получить итоги смены');
+            return;
+          }
+          hideError();
+          lastShiftReportText = buildShiftReportPlain(data.summary);
+          shiftSummaryBody.innerHTML = shiftSummaryHumanLines(data.summary);
+          shiftSummaryModal.classList.add('open');
+        } catch (e) {
+          showError('Ошибка запроса итогов: ' + e.message);
+        }
+      });
+    }
+
+    document.getElementById('btnShiftSummaryDone').addEventListener('click', () => {
+      shiftSummaryModal.classList.remove('open');
+      try {
+        localStorage.removeItem(SHIFT_STORAGE_KEY);
+      } catch (_) {}
+      lastShiftReportText = '';
+      applyShiftUi();
+    });
+
+    document.getElementById('btnShiftSummaryPrint').addEventListener('click', () => {
+      window.print();
+    });
+
+    document.getElementById('btnShiftSummaryCopy').addEventListener('click', async () => {
+      const t = lastShiftReportText;
+      if (!t) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(t);
+        } else {
+          throw new Error('no clipboard');
+        }
+      } catch (_) {
+        window.prompt('Скопируйте отчёт:', t);
+      }
+    });
+
+    applyShiftUi();
 
     async function updateOrderStatus(orderId, status) {
       try {
@@ -375,7 +646,7 @@
           <div class="order-card-header">
             <div>
               <span class="order-id">Заказ ${escapeHtml(order.orderId)}</span>
-              <div class="order-time">${formatTime(order.createdAt)}</div>
+              ${orderCreatedMetaStaff(order.createdAt)}
             </div>
             <span class="order-status status-${order.status || 'new'}">${statusLabel(order.status || 'new')}</span>
           </div>
@@ -427,7 +698,7 @@
           <div class="order-card-header">
             <div>
               <span class="order-id">Бронь ${escapeHtml(reservation.reservationId)}</span>
-              <div class="order-time">${formatTime(reservation.createdAt)}</div>
+              ${orderCreatedMetaStaff(reservation.createdAt)}
             </div>
             <span class="order-status status-${reservation.status || 'pending'}">${statusLabel(reservation.status || 'pending')}</span>
           </div>

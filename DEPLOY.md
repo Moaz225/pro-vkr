@@ -50,6 +50,15 @@ In Render Dashboard → your service → **Environment**:
 - **TRUST_PROXY**: `1` (recommended on Render)
 - **COOKIE_SECURE**: `1`
 
+**`PUBLIC_BASE_URL`** must match your live site (HTTPS). It is used for YooKassa return URLs and for **links to cancellation proof files** in outbound email; wrong values break redirects and broken proof links in messages.
+
+**Email (optional):** cancellation workflow can send mail via Nodemailer. If you skip SMTP, the app still runs but logs that mail was skipped. To enable, set in Render **Environment** (see root `.env.example` for descriptions):
+
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE` (`0` or `1`)
+- `SMTP_USER`, `SMTP_PASS` (if required by your provider)
+- `MAIL_FROM` (required together with `SMTP_HOST` for sending)
+- `MAIL_TO_MANAGER` (optional; notifications for new cancellation requests)
+
 After changes, click **Save Changes** (Render redeploys).
 
 ## 5) Verify the deployment

@@ -40,6 +40,8 @@ The project is designed to run locally with a simple Node.js server that serves 
   - view orders and reservations
   - confirm/cancel reservations
   - audible notification toggle + volume
+- **My orders** (`my-orders.html`): logged-in customers see their orders and can request cancellation (pending review / auto-approve after 15 minutes).
+- **Cancellations queue** (`cancellations.html`): managers review cancellation requests, approve (YooKassa refund when applicable) or reject.
 - **Auth overlay** on the menu page:
   - signup / login / continue as guest
   - UI may cache state in `localStorage`, but auth is enforced by server-side cookie sessions (`/api/auth/me`)
@@ -53,7 +55,7 @@ The project is designed to run locally with a simple Node.js server that serves 
 - **Password hashing**: `crypto` (PBKDF2)
 
 Key dependencies (root `package.json`):
-- `express`, `cors`, `dotenv`
+- `express`, `cors`, `dotenv`, `multer` (cancellation proof uploads), `nodemailer` (optional SMTP email)
 - `prisma` (dev), `@prisma/client`
 
 ## Installation
@@ -105,8 +107,10 @@ node server.js
 Always open pages via HTTP (served by the Node server), not via `file:///`.
 
 - **Guest menu + checkout**: `http://localhost:3000/`
+- **My orders (auth)**: `http://localhost:3000/my-orders.html`
 - **Staff dashboard**: `http://localhost:3000/staff-orders.html`
 - **Manager dashboard**: `http://localhost:3000/manager.html`
+- **Cancellations (manager)**: `http://localhost:3000/cancellations.html`
 
 ### Important behavior (data persistence)
 - **Orders, reservations, and payments**: stored in **PostgreSQL** via Prisma.
@@ -143,6 +147,8 @@ Same shape as register.
 
 #### `GET /api/auth/me`
 Uses cookie session (send requests with credentials).
+
+**Response (success)** includes `user.role`: `user`, `staff`, or `manager` (for gating manager-only pages).
 
 #### `POST /api/auth/logout`
 Destroys cookie session. Requires CSRF token (see below).
@@ -190,6 +196,18 @@ Supports query params (server-side filtering):
 - `sort` (`asc` or `desc`, default `desc`)
 - `limit` (integer)
 
+#### `GET /api/orders/shift-summary`
+Aggregates orders whose `createdAt` falls in the inclusive window `from` … `to` (ISO 8601 timestamps). Query: **`from`**, **`to`** (required). Invalid or missing values → `400`.
+
+Response `summary`:
+
+- **`orderCount`**: all orders in the interval.
+- **`totalRevenue`** / **`averageOrderValue`**: computed only for orders whose status is **not** `cancelled` (Отменённые исключены из выручки).
+- **`revenueOrderCount`**: number of non-cancelled orders used for revenue.
+- **`from`** / **`to`**: normalized range (if `from` > `to`, bounds are swapped).
+
+Used by the staff shift UI on `staff-orders.html`.
+
 #### `PATCH /api/orders/:orderId`
 Update order status.
 
@@ -199,6 +217,23 @@ Update order status.
 ```
 
 Allowed: `new`, `in_progress`, `done`
+
+### Cancellations (logged-in customer)
+#### `GET /api/me/orders`
+Lists the current user’s orders with payment summary and cancellation fields.
+
+#### `POST /api/orders/:orderId/cancel`
+Multipart form: `reason` (enum), `description` (optional), `proof` (file, required for `BAD_QUALITY` and `EMERGENCY`). Requires CSRF header.
+
+#### `POST /api/orders/:orderId/cancel-proof`
+Upload proof for an existing pending cancellation when required. Requires CSRF header.
+
+### Cancellations (manager)
+#### `GET /api/cancellations/pending`
+Lists orders with `cancelStatus` pending (manager role only).
+
+#### `POST /api/cancellations/:orderId/approve` / `POST .../reject`
+Approve triggers YooKassa refund when the payment succeeded; reject requires JSON `{ "rejectionReason": "..." }`. Both require CSRF.
 
 ### Reservations
 #### `POST /api/reservations`
@@ -259,21 +294,26 @@ DATABASE_URL="postgresql://Tech@localhost:5432/brodsky?schema=public"
 
 - **`PORT`** (optional): server port (default `3000`)
 - **`CORS_ORIGIN`**: CORS allowlist (use explicit origins in production)
-- **`PUBLIC_BASE_URL`**: public base URL (used for YooKassa return URL)
+- **`PUBLIC_BASE_URL`**: public base URL (used for YooKassa return URL and cancellation proof links in emails)
 - **`SESSION_SECRET`**: session secret (required in production)
+- **Optional SMTP** (see `.env.example`): `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_TO_MANAGER` — if unset, cancellation emails are skipped (warning in logs).
 
 ### Optional frontend API base overrides
 These pages support overriding API base via global variables:
 - `window.BRODSKY_API_BASE` (menu page)
 - `window.STAFF_API_BASE` (staff page)
 - `window.MANAGER_API_BASE` (manager page)
+- `window.BRODSKY_MY_ORDERS_API_BASE` (`my-orders.html`)
+- `window.BRODSKY_CANCELLATIONS_API_BASE` (`cancellations.html`)
 
-If not set, the dashboards default to `http://localhost:3000`.
+If not set, pages use `location.origin` when served over HTTP(S).
 
 ## Folder Structure
 ```text
 E:\pro vkr\
   index.html              # Guest menu page
+  my-orders.html          # Customer orders + cancel requests
+  cancellations.html      # Manager cancellation queue
   staff-orders.html       # Staff dashboard
   manager.html            # Manager dashboard
   style.css               # Global styles
@@ -283,6 +323,8 @@ E:\pro vkr\
     migrations\           # Prisma migrations (if applied)
   server\
     server.js             # Express server + API endpoints
+    mail.js               # Optional Nodemailer wrapper
+    cancellation-routes.js # Cancellation / refund API + auto-approve timer
   .env                    # Environment variables (DATABASE_URL, etc.)
   package.json            # Root dependencies + Prisma scripts
 ```

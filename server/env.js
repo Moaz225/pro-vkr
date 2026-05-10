@@ -106,6 +106,14 @@ function validateAndLoadEnv() {
   }
   const cookieSecure = parseBool('COOKIE_SECURE', isProd);
 
+  const smtpHost = optionalEnv('SMTP_HOST', '');
+  const smtpPort = parseIntEnv('SMTP_PORT', 587);
+  const smtpSecure = parseBool('SMTP_SECURE', false);
+  const smtpUser = optionalEnv('SMTP_USER', '');
+  const smtpPass = optionalEnv('SMTP_PASS', '');
+  const mailFrom = optionalEnv('MAIL_FROM', '');
+  const mailToManager = optionalEnv('MAIL_TO_MANAGER', '');
+
   return {
     nodeEnv,
     isProd,
@@ -118,7 +126,14 @@ function validateAndLoadEnv() {
     yookassaCurrency,
     trustProxy,
     sessionSecret,
-    cookieSecure
+    cookieSecure,
+    smtpHost,
+    smtpPort,
+    smtpSecure,
+    smtpUser,
+    smtpPass,
+    mailFrom,
+    mailToManager
   };
 }
 
