@@ -4,6 +4,7 @@
   "description": "",
   "main": "script.js",
   "scripts": {
+    "postinstall": "prisma generate --schema prisma/schema.prisma",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prisma:validate": "prisma validate --schema prisma/schema.prisma",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",

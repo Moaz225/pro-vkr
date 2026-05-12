@@ -4,11 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BRODSKY. — Заказы для персонала</title>
+  <meta name="theme-color" content="#1a1a1a">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
-    body { background: #f0f0f0; padding: 20px; }
+    :root {
+      --bg-color: #f0f0f0;
+      --text-color: #1a1a1a;
+      --card-bg: #ffffff;
+      --border-color: #e8e8e8;
+      --border: #e8e8e8;
+      --muted: #666666;
+      --muted-strong: #333333;
+      --comment-bg: #f5f5f5;
+      --danger-bg: #ffebee;
+      --danger-text: #c62828;
+      --dash-border: #eeeeee;
+    }
+    body { background: var(--bg-color); color: var(--text-color); padding: 20px; }
     .staff-page { max-width: 1000px; margin: 0 auto; }
     .staff-header {
       display: flex;
@@ -41,7 +56,7 @@
       font-size: .95rem;
     }
     .staff-refresh:hover { background: var(--primary-dark); }
-    .staff-auto { font-size: .85rem; color: #666; margin-top: 4px; }
+    .staff-auto { font-size: .85rem; color: var(--muted); margin-top: 4px; }
     .sound-controls {
       display: inline-flex;
       align-items: center;
@@ -67,8 +82,9 @@
       align-items: center;
       gap: 8px;
       font-size: .9rem;
-      color: #444;
-      background: #fff;
+      color: var(--text-color);
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
       padding: 8px 12px;
       border-radius: 999px;
       box-shadow: 0 2px 10px rgba(0,0,0,.06);
@@ -77,7 +93,7 @@
     .tab-btn.active { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
     .orders-list { display: flex; flex-direction: column; gap: 16px; }
     .order-card {
-      background: #fff;
+      background: var(--card-bg);
       border-radius: 16px;
       padding: 20px;
       box-shadow: 0 4px 16px rgba(0,0,0,.08);
@@ -93,15 +109,15 @@
       gap: 12px;
       margin-bottom: 12px;
     }
-    .order-id { font-weight: 700; font-size: 1.1rem; color: var(--dark); }
-    .order-time { font-size: .9rem; color: #666; }
+    .order-id { font-weight: 700; font-size: 1.1rem; color: var(--text-color); }
+    .order-time { font-size: .9rem; color: var(--muted); }
     .order-created-meta {
       font-size: .85rem;
-      color: #555;
+      color: var(--muted);
       line-height: 1.45;
       margin-top: 6px;
     }
-    .order-created-meta strong { font-weight: 600; color: #333; }
+    .order-created-meta strong { font-weight: 600; color: var(--muted-strong); }
     .staff-shift-bar {
       display: flex;
       align-items: center;
@@ -109,7 +125,7 @@
       flex-wrap: wrap;
       margin-bottom: 20px;
       padding: 12px 16px;
-      background: #fff;
+      background: var(--card-bg);
       border-radius: 16px;
       box-shadow: 0 4px 16px rgba(0,0,0,.08);
     }
@@ -130,7 +146,7 @@
     .shift-btn.secondary { background: #555; }
     .shift-btn.secondary:hover { filter: brightness(1.08); }
     .shift-btn:disabled { opacity: .55; cursor: not-allowed; }
-    .shift-timer-wrap { font-size: .95rem; color: #333; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .shift-timer-wrap { font-size: .95rem; color: var(--text-color); display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .shift-timer { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--primary-dark); }
     .staff-modal-overlay {
       display: none;
@@ -144,22 +160,83 @@
     }
     .staff-modal-overlay.open { display: flex; }
     .staff-modal-box {
-      background: #fff;
+      background: var(--card-bg);
+      color: var(--text-color);
       border-radius: 16px;
       max-width: 440px;
       width: 100%;
       padding: 22px;
       box-shadow: 0 8px 40px rgba(0,0,0,.2);
     }
-    .staff-modal-box h3 { margin: 0 0 14px; font-size: 1.15rem; color: var(--dark); }
-    .staff-modal-box .shift-summary-lines { font-size: .95rem; line-height: 1.65; color: #333; }
+    .staff-modal-box h3 { margin: 0 0 14px; font-size: 1.15rem; color: var(--text-color); }
+    .staff-modal-box .shift-summary-lines { font-size: .95rem; line-height: 1.65; color: var(--text-color); }
     .staff-modal-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; justify-content: flex-end; }
     @media print {
       body * { visibility: hidden !important; }
-      #shiftSummaryPrintArea, #shiftSummaryPrintArea * { visibility: visible !important; }
-      #shiftSummaryPrintArea { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; box-shadow: none !important; }
-      #shiftSummaryPrintArea .staff-modal-actions { display: none !important; }
+
+      body.printing-shift #shiftSummaryPrintArea,
+      body.printing-shift #shiftSummaryPrintArea * {
+        visibility: visible !important;
+      }
+      body.printing-shift #shiftSummaryPrintArea {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        box-shadow: none !important;
+      }
+      body.printing-shift #shiftSummaryPrintArea .staff-modal-actions {
+        display: none !important;
+      }
+
+      body.printing-receipt #receiptPrintPortal,
+      body.printing-receipt #receiptPrintPortal * {
+        visibility: visible !important;
+      }
+      body.printing-receipt #receiptPrintPortal {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 58mm !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        padding: 4mm !important;
+        margin: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+        box-shadow: none !important;
+      }
+      /* Для термопринтера 80 мм: здесь можно задать width: 72mm */
+      @page {
+        margin: 2mm;
+        size: auto;
+      }
     }
+    #receiptPrintPortal {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: 58mm;
+      background: #fff;
+      color: #000;
+      padding: 8px;
+      font-family: ui-monospace, 'Courier New', monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .btn-print-receipt {
+      background: #555 !important;
+      color: #fff !important;
+    }
+    .btn-print-receipt:hover { filter: brightness(1.08); }
+    .btn-notify-ready {
+      background: #0277bd !important;
+      color: #fff !important;
+    }
+    .btn-notify-ready:hover { filter: brightness(1.05); }
     .order-status {
       padding: 4px 12px;
       border-radius: 999px;
@@ -175,15 +252,16 @@
     .order-items { list-style: none; margin: 0; padding: 0; }
     .order-items li {
       padding: 6px 0;
-      border-bottom: 1px dashed #eee;
+      border-bottom: 1px dashed var(--dash-border);
       display: flex; justify-content: space-between; gap: 12px;
     }
     .order-items li:last-child { border-bottom: none; }
     .order-total { font-weight: 700; font-size: 1.1rem; color: var(--primary); margin-top: 8px; }
-    .order-payment { font-size: .9rem; color: #666; margin-top: 4px; }
-    .order-comment { margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 8px; font-size: .9rem; color: #333; }
+    .order-payment { font-size: .9rem; color: var(--muted); margin-top: 4px; }
+    .order-comment { margin-top: 10px; padding: 10px; background: var(--comment-bg); border-radius: 8px; font-size: .9rem; color: var(--text-color); }
     .order-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    .order-actions button {
+    .order-actions button,
+    .staff-done-extra {
       padding: 8px 14px;
       border: none;
       border-radius: 8px;
@@ -196,20 +274,37 @@
     .order-actions .btn-done { background: #4caf50; color: #fff; }
     .order-actions .btn-done:hover { background: #388e3c; }
     .order-actions button:disabled { opacity: .6; cursor: not-allowed; }
-    .staff-empty { text-align: center; padding: 48px 20px; color: #666; }
-    .staff-error { background: #ffebee; color: #c62828; padding: 12px; border-radius: 12px; margin-bottom: 16px; }
+    .staff-empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .staff-error { background: var(--danger-bg); color: var(--danger-text); padding: 12px; border-radius: 12px; margin-bottom: 16px; }
+    .staff-page .tabs .tab-btn {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .staff-page .tabs .tab-btn.active {
+      color: var(--primary) !important;
+      border-bottom-color: var(--primary) !important;
+    }
   </style>
 </head>
 <body>
   <div class="staff-page">
+    <nav class="brodsky-app-nav" aria-label="Разделы приложения">
+      <a href="index.html"><i class="fas fa-utensils"></i> Меню</a>
+      <a href="staff-orders.html" class="is-current"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
+      <a href="cancellations.html"><i class="fas fa-undo-alt"></i> Отмены</a>
+    </nav>
     <div class="staff-header">
       <div>
-        <h1><i class="fas fa-clipboard-list"></i> Заказы для персонала</h1>
+        <h1 style="margin:0;"><i class="fas fa-clipboard-list"></i> BRODSKY — Заказы для персонала</h1>
         <p class="staff-auto">Обновление каждые 30 сек</p>
       </div>
       <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-        <a href="index.html"><i class="fas fa-arrow-left"></i> Меню для гостей</a>
-        <a href="cancellations.html" title="Доступно только менеджерам"><i class="fas fa-undo-alt"></i> Запросы на отмену</a>
         <div class="sound-controls">
           <button type="button" class="sound-btn" id="btnSound" aria-label="Звуковые уведомления">
             <i class="fas fa-volume-high"></i> Звук: выкл
@@ -237,8 +332,8 @@
     <div id="staffError" class="staff-error" hidden></div>
 
     <div class="tabs" style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border);">
-      <button class="tab-btn active" data-tab="orders" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 1rem; font-weight: 500; color: #666;">Заказы</button>
-      <button class="tab-btn" data-tab="reservations" style="padding: 12px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 1rem; font-weight: 500; color: #666;">Бронирования</button>
+      <button type="button" class="tab-btn active" data-tab="orders">Заказы</button>
+      <button type="button" class="tab-btn" data-tab="reservations">Бронирования</button>
     </div>
 
     <div id="tabOrders" class="tab-content" style="display: block;">
@@ -258,11 +353,14 @@
     </div>
   </div>
 
+  <div id="receiptPrintPortal" aria-hidden="true"></div>
+
   <div id="staffShiftSummaryModal" class="staff-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="shiftSummaryTitle">
     <div class="staff-modal-box shift-summary-print-area" id="shiftSummaryPrintArea">
       <h3 id="shiftSummaryTitle">Итоги смены</h3>
       <div class="shift-summary-lines" id="shiftSummaryBody"></div>
       <div class="staff-modal-actions">
+        <button type="button" class="shift-btn" id="btnShiftFinalize" style="background:#c62828;"><i class="fas fa-triangle-exclamation"></i> Подтвердить закрытие смены</button>
         <button type="button" class="shift-btn secondary" id="btnShiftSummaryCopy"><i class="fas fa-copy"></i> Скопировать отчёт</button>
         <button type="button" class="shift-btn secondary" id="btnShiftSummaryPrint"><i class="fas fa-print"></i> Печать</button>
         <button type="button" class="shift-btn" id="btnShiftSummaryDone"><i class="fas fa-check"></i> Готово</button>
@@ -270,6 +368,8 @@
     </div>
   </div>
 
+  <script src="toast.js"></script>
+  <script src="pwa.js"></script>
   <script>
     // API base:
     // - On Render/production: use same-origin (no hardcoded localhost).
@@ -281,13 +381,51 @@
     const REFRESH_INTERVAL = 30000;
 
     let csrfToken = null;
-    async function ensureCsrfToken() {
-      if (csrfToken) return csrfToken;
-      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+    let csrfFetchInflight = null;
+
+    function syncGlobalCsrf() {
+      window.csrfToken = csrfToken;
+    }
+
+    async function fetchCsrfFromServer() {
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include', cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.csrfToken) throw new Error('CSRF token missing');
       csrfToken = data.csrfToken;
+      syncGlobalCsrf();
       return csrfToken;
+    }
+
+    async function refreshCsrfToken() {
+      csrfFetchInflight = null;
+      csrfToken = null;
+      syncGlobalCsrf();
+      return ensureCsrfToken(true);
+    }
+
+    async function ensureCsrfToken(forceRefresh) {
+      if (forceRefresh) {
+        csrfFetchInflight = null;
+        csrfToken = null;
+        syncGlobalCsrf();
+      }
+      if (csrfToken) return csrfToken;
+      if (!csrfFetchInflight) {
+        csrfFetchInflight = fetchCsrfFromServer().finally(function () {
+          csrfFetchInflight = null;
+        });
+      }
+      return csrfFetchInflight;
+    }
+
+    function isCsrf403(res, data) {
+      if (res.status !== 403) return false;
+      var msg = String((data && data.error) || '').toLowerCase();
+      return msg.indexOf('csrf') !== -1;
+    }
+
+    if (API_BASE) {
+      ensureCsrfToken(false).catch(function () {});
     }
 
     const ordersContainer = document.getElementById('ordersContainer');
@@ -378,15 +516,9 @@
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
-        document.querySelectorAll('.tab-btn').forEach(b => {
-          b.classList.remove('active');
-          b.style.color = '#666';
-          b.style.borderBottomColor = 'transparent';
-        });
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
         btn.classList.add('active');
-        btn.style.color = 'var(--primary)';
-        btn.style.borderBottomColor = 'var(--primary)';
         document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
         currentTab = tab;
         if (tab === 'reservations' && reservationsContainer.children.length === 0) {
@@ -404,7 +536,10 @@
     }
 
     function paymentLabel(method) {
-      return { visa: 'Visa', qr: 'QR-код', cash: 'Наличные' }[method] || method;
+      if (method === 'visa' || method === 'qr' || method === 'cash') {
+        return 'Онлайн (YooKassa)';
+      }
+      return method || '—';
     }
 
     function statusLabel(status) {
@@ -460,8 +595,10 @@
     const shiftTimerDisplay = document.getElementById('shiftTimerDisplay');
     const shiftSummaryModal = document.getElementById('staffShiftSummaryModal');
     const shiftSummaryBody = document.getElementById('shiftSummaryBody');
+    const btnShiftFinalize = document.getElementById('btnShiftFinalize');
     let shiftTimerInterval = null;
     let lastShiftReportText = '';
+    let pendingFinalize = null; // { reportId, finalizeToken }
 
     function getShiftStartIso() {
       try {
@@ -562,6 +699,9 @@
           return;
         }
         const toIso = new Date().toISOString();
+        const shiftEndHtml = btnShiftEnd.innerHTML;
+        btnShiftEnd.disabled = true;
+        btnShiftEnd.innerHTML = '<span class="brodsky-spinner" style="vertical-align:middle;margin-right:8px"></span> Загрузка…';
         try {
           const url = API_BASE + '/api/orders/shift-summary?from=' + encodeURIComponent(fromIso) + '&to=' + encodeURIComponent(toIso);
           const res = await fetch(url);
@@ -570,27 +710,148 @@
             showError((data && data.error) || 'Не удалось получить итоги смены');
             return;
           }
+          // Save shift report to DB for manager before clearing shift.
+          var shiftToken = await ensureCsrfToken(false);
+          var saveRes = await fetch(API_BASE + '/api/orders/shift-close', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': shiftToken },
+            body: JSON.stringify({ from: fromIso, to: toIso, summary: data.summary })
+          });
+          var saveData = await saveRes.json().catch(() => ({}));
+          if (isCsrf403(saveRes, saveData)) {
+            await refreshCsrfToken();
+            shiftToken = await ensureCsrfToken(false);
+            saveRes = await fetch(API_BASE + '/api/orders/shift-close', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': shiftToken },
+              body: JSON.stringify({ from: fromIso, to: toIso, summary: data.summary })
+            });
+            saveData = await saveRes.json().catch(() => ({}));
+          }
+          if (!saveRes.ok || !saveData.success || !saveData.reportId || !saveData.finalizeToken) {
+            showError((saveData && saveData.error) || 'Не удалось сохранить отчёт смены. Попробуйте ещё раз.');
+            return;
+          }
+
           hideError();
+          pendingFinalize = { reportId: saveData.reportId, finalizeToken: saveData.finalizeToken };
           lastShiftReportText = buildShiftReportPlain(data.summary);
-          shiftSummaryBody.innerHTML = shiftSummaryHumanLines(data.summary);
+          shiftSummaryBody.innerHTML =
+            '<p style="margin:0 0 10px;"><strong>Отчёт сохранён для менеджера.</strong> Номер: <code>'
+            + String(saveData.reportId)
+            + '</code></p>'
+            + '<div style="margin:10px 0 12px; padding:12px; border-radius:12px; background:#ffebee; color:#c62828;">'
+            + '<strong>Внимание:</strong> подтверждение закрытия смены удалит все заказы/оплаты/брони за день из базы данных. '
+            + 'Это необратимо. Убедитесь, что отчёт верный.'
+            + '</div>'
+            + shiftSummaryHumanLines(data.summary);
           shiftSummaryModal.classList.add('open');
         } catch (e) {
-          showError('Ошибка запроса итогов: ' + e.message);
+          showError('Ошибка закрытия смены: ' + e.message);
+        } finally {
+          btnShiftEnd.disabled = false;
+          btnShiftEnd.innerHTML = shiftEndHtml;
+        }
+      });
+    }
+
+    if (btnShiftFinalize) {
+      btnShiftFinalize.addEventListener('click', async () => {
+        if (!pendingFinalize || !pendingFinalize.reportId || !pendingFinalize.finalizeToken) {
+          showError('Нельзя выполнить очистку: отчёт смены не создан.');
+          return;
+        }
+
+        const warn =
+          'ВЫ ПОДТВЕРЖДАЕТЕ ЗАКРЫТИЕ СМЕНЫ.\n\n' +
+          'Будут удалены:\n' +
+          '- webhook-события\n' +
+          '- оплаты\n' +
+          '- позиции заказов\n' +
+          '- заказы\n' +
+          '- бронирования\n' +
+          '- (опционально) сессии\n\n' +
+          'Сохранятся:\n' +
+          '- отчёты по сменам\n' +
+          '- пользователи\n' +
+          '- товары\n\n' +
+          'Продолжить?';
+        if (!confirm(warn)) return;
+        if (!confirm('Последнее предупреждение: действие необратимо. Подтвердить очистку данных?')) return;
+
+        const finalizeHtml = btnShiftFinalize.innerHTML;
+        btnShiftFinalize.disabled = true;
+        btnShiftFinalize.innerHTML = '<span class="brodsky-spinner" style="vertical-align:middle;margin-right:8px"></span> Выполняется…';
+
+        try {
+          const finalizeBody = JSON.stringify({
+            reportId: pendingFinalize.reportId,
+            finalizeToken: pendingFinalize.finalizeToken
+          });
+          async function postFinalize(token) {
+            return fetch(API_BASE + '/api/orders/shift-finalize', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+              body: finalizeBody
+            });
+          }
+          let finToken = await ensureCsrfToken(false);
+          let res = await postFinalize(finToken);
+          let data = await res.json().catch(() => ({}));
+          if (isCsrf403(res, data)) {
+            await refreshCsrfToken();
+            finToken = await ensureCsrfToken(false);
+            res = await postFinalize(finToken);
+            data = await res.json().catch(() => ({}));
+          }
+          if (!res.ok || !data.success) {
+            showError((data && data.error) || 'Не удалось выполнить очистку данных.');
+            return;
+          }
+
+          // After deletion: clear local shift state and reset UI.
+          try {
+            localStorage.removeItem(SHIFT_STORAGE_KEY);
+          } catch (_) {}
+          pendingFinalize = null;
+          lastShiftReportText = '';
+          applyShiftUi();
+
+          shiftSummaryBody.innerHTML =
+            '<p style="margin:0 0 10px;"><strong>Смена закрыта.</strong> Все данные очищены. Отчёт сохранён.</p>'
+            + (data.deleted
+              ? '<p style="margin:0; color:#555; font-size:.9rem;">Удалено: '
+                + 'webhookEvent=' + (data.deleted.webhookEvent ?? 0) + ', '
+                + 'payment=' + (data.deleted.payment ?? 0) + ', '
+                + 'orderItem=' + (data.deleted.orderItem ?? 0) + ', '
+                + 'order=' + (data.deleted.order ?? 0) + ', '
+                + 'reservation=' + (data.deleted.reservation ?? 0)
+                + '</p>'
+              : '');
+
+          shiftSummaryModal.classList.add('open');
+        } catch (e) {
+          showError('Ошибка очистки данных: ' + e.message);
+        } finally {
+          btnShiftFinalize.disabled = false;
+          btnShiftFinalize.innerHTML = finalizeHtml;
         }
       });
     }
 
     document.getElementById('btnShiftSummaryDone').addEventListener('click', () => {
       shiftSummaryModal.classList.remove('open');
-      try {
-        localStorage.removeItem(SHIFT_STORAGE_KEY);
-      } catch (_) {}
       lastShiftReportText = '';
       applyShiftUi();
     });
 
     document.getElementById('btnShiftSummaryPrint').addEventListener('click', () => {
+      document.body.classList.add('printing-shift');
       window.print();
+      setTimeout(() => document.body.classList.remove('printing-shift'), 400);
     });
 
     document.getElementById('btnShiftSummaryCopy').addEventListener('click', async () => {
@@ -609,15 +870,99 @@
 
     applyShiftUi();
 
+    function formatReceiptDateRu(iso) {
+      try {
+        const d = new Date(iso);
+        if (!Number.isFinite(d.getTime())) return '—';
+        return new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+      } catch (_) {
+        return '—';
+      }
+    }
+
+    function buildReceiptHtml(order) {
+      const name = 'BRODSKY';
+      const when = formatReceiptDateRu(order.createdAt);
+      const rows = (order.items || []).map((i) => {
+        const line = `${i.name || ''} × ${i.qty || 1}`;
+        const sum = Number(i.price) * Number(i.qty || 1);
+        return `<div>${escapeHtml(line)}</div><div style="text-align:right">${sum} ₽</div>`;
+      });
+      const gridItems = rows.length
+        ? `<div style="display:grid;grid-template-columns:1fr auto;gap:2px 8px;margin:8px 0;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:6px 0;">${rows.join('')}</div>`
+        : '';
+      return (
+        `<div style="font-weight:700;text-align:center;font-size:12px">${escapeHtml(name)}</div>`
+        + `<div style="text-align:center;margin:4px 0 10px">${escapeHtml(when)}</div>`
+        + `<div>Заказ: <strong>${escapeHtml(order.orderId)}</strong></div>`
+        + gridItems
+        + `<div style="margin-top:8px;font-weight:700">Итого: ${Number(order.total) || 0} ₽</div>`
+        + `<div style="margin-top:6px;">Оплата: ${escapeHtml(paymentLabel(order.paymentMethod))}</div>`
+        + `<div style="margin-top:14px;text-align:center;">Спасибо за заказ!</div>`
+      );
+    }
+
+    function printOrderReceipt(order) {
+      const host = document.getElementById('receiptPrintPortal');
+      if (!host || !order) return;
+      host.innerHTML = buildReceiptHtml(order);
+      document.body.classList.add('printing-receipt');
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('printing-receipt');
+        host.innerHTML = '';
+      }, 450);
+    }
+
+    async function notifyCustomerReady(orderId) {
+      if (!API_BASE || !orderId) return;
+      try {
+        async function doPost(tok) {
+          return fetch(API_BASE + '/api/orders/' + encodeURIComponent(orderId) + '/notify-ready', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': tok },
+            body: '{}'
+          });
+        }
+        let token = await ensureCsrfToken(false);
+        let res = await doPost(token);
+        let data = await res.json().catch(() => ({}));
+        if (isCsrf403(res, data)) {
+          await refreshCsrfToken();
+          token = await ensureCsrfToken(false);
+          res = await doPost(token);
+          data = await res.json().catch(() => ({}));
+        }
+        if (!res.ok) {
+          throw new Error((data && data.error) || 'Не удалось отправить уведомление');
+        }
+        if (typeof showToast === 'function') showToast('Клиент получит уведомление (если он онлайн)', 'success');
+      } catch (e) {
+        if (typeof showToast === 'function') showToast(String(e.message || e), 'error');
+      }
+    }
+
     async function updateOrderStatus(orderId, status) {
       try {
-        const token = await ensureCsrfToken();
-        const res = await fetch(API_BASE + '/api/orders/' + encodeURIComponent(orderId), {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-          credentials: 'include',
-          body: JSON.stringify({ status })
-        });
+        const body = JSON.stringify({ status });
+        async function patchOrder(token) {
+          return fetch(API_BASE + '/api/orders/' + encodeURIComponent(orderId), {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+            body: body
+          });
+        }
+        let token = await ensureCsrfToken(false);
+        let res = await patchOrder(token);
+        let data = await res.json().catch(() => ({}));
+        if (isCsrf403(res, data)) {
+          await refreshCsrfToken();
+          token = await ensureCsrfToken(false);
+          res = await patchOrder(token);
+          data = await res.json().catch(() => ({}));
+        }
         if (res.ok) fetchOrders();
       } catch (e) {
         showError('Ошибка обновления статуса: ' + e.message);
@@ -659,6 +1004,7 @@
           <div class="order-actions">
             ${(order.status === 'new' ? '<button type="button" class="btn-start" data-order-id="' + escapeHtml(order.orderId) + '" data-status="in_progress">В работу</button>' : '')}
             ${(order.status === 'in_progress' ? '<button type="button" class="btn-done" data-order-id="' + escapeHtml(order.orderId) + '" data-status="done">Готово</button>' : '')}
+            ${(order.status === 'done' ? '<button type="button" class="btn-print-receipt staff-done-extra">Печать чека</button><button type="button" class="btn-notify-ready staff-done-extra">Уведомить клиента</button>' : '')}
           </div>
         `;
 
@@ -669,6 +1015,10 @@
             if (id && status) updateOrderStatus(id, status);
           });
         });
+        const rp = card.querySelector('.btn-print-receipt');
+        if (rp) rp.addEventListener('click', () => printOrderReceipt(order));
+        const nr = card.querySelector('.btn-notify-ready');
+        if (nr) nr.addEventListener('click', () => notifyCustomerReady(order.orderId));
 
         ordersContainer.appendChild(card);
       });
@@ -720,6 +1070,8 @@
 
     async function fetchOrders() {
       btnRefresh.disabled = true;
+      // Skeletons
+      ordersContainer.innerHTML = '<div class="order-card"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div><div style="margin-top:10px" class="brodsky-skeleton brodsky-skeleton-line md"></div><div style="margin-top:8px" class="brodsky-skeleton brodsky-skeleton-line sm"></div></div>'.repeat(4);
       try {
         const res = await fetch(ORDERS_URL);
         if (!res.ok) throw new Error('Сервер вернул ' + res.status);
@@ -741,6 +1093,7 @@
     }
 
     async function fetchReservations() {
+      reservationsContainer.innerHTML = '<div class="order-card"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div><div style="margin-top:10px" class="brodsky-skeleton brodsky-skeleton-line md"></div><div style="margin-top:8px" class="brodsky-skeleton brodsky-skeleton-line sm"></div></div>'.repeat(3);
       try {
         const res = await fetch(RESERVATIONS_URL);
         if (!res.ok) throw new Error('Сервер вернул ' + res.status);

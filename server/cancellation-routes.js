@@ -376,11 +376,6 @@ function registerCancellationRoutes(app, deps) {
 
   app.get('/api/cancellations/pending', async (req, res) => {
     try {
-      const userId = getSessionUserId(req);
-      const mgr = await loadManager(userId);
-      if (!mgr) {
-        return res.status(403).json({ success: false, error: 'Доступ запрещён' });
-      }
       const rows = await prisma.order.findMany({
         where: { cancelStatus: 'Pending' },
         orderBy: { cancelRequestedAt: 'asc' },
@@ -409,11 +404,6 @@ function registerCancellationRoutes(app, deps) {
 
   app.post('/api/cancellations/:orderId/approve', cancelLimiter, csrfProtection, async (req, res) => {
     try {
-      const userId = getSessionUserId(req);
-      const mgr = await loadManager(userId);
-      if (!mgr) {
-        return res.status(403).json({ success: false, error: 'Доступ запрещён' });
-      }
       const orderId = String(req.params.orderId || '');
       const out = await performApprove(orderId, 'manager');
       if (out.type === 'not_found') {
@@ -437,11 +427,6 @@ function registerCancellationRoutes(app, deps) {
 
   app.post('/api/cancellations/:orderId/reject', cancelLimiter, csrfProtection, async (req, res) => {
     try {
-      const userId = getSessionUserId(req);
-      const mgr = await loadManager(userId);
-      if (!mgr) {
-        return res.status(403).json({ success: false, error: 'Доступ запрещён' });
-      }
       const orderId = String(req.params.orderId || '');
       const rejectionReason = String(req.body.rejectionReason || '').trim();
       if (!rejectionReason) {

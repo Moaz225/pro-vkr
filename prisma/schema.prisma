@@ -123,6 +123,22 @@ model OrderItem {
   @@index([orderId])
 }
 
+model ShiftReport {
+  id             Int      @id @default(autoincrement())
+  staffName      String
+  shiftStart     DateTime
+  shiftEnd       DateTime
+  orderCount     Int
+  totalRevenue   Decimal
+  averageOrder   Decimal
+  cancelledCount Int
+  createdAt      DateTime @default(now())
+  finalizeToken  String?  @unique
+  finalizedAt    DateTime?
+
+  @@index([createdAt])
+}
+
 model Product {
   id          String   @id @default(cuid())
   name        String
@@ -130,6 +146,7 @@ model Product {
   price       Decimal
   category    String
   imageUrl    String
+  isAvailable Boolean  @default(true)
 
   @@index([category])
   @@index([name])
@@ -173,6 +190,15 @@ model WebhookEvent {
 
   @@index([paymentId])
   @@index([provider, event])
+}
+
+model Settings {
+  id             String  @id @default("default")
+  cafeName       String  @default("BRODSKY.")
+  logoUrl        String?
+  primaryColor   String  @default("#ff7700")
+  secondaryColor String  @default("#e56a00")
+  updatedAt      DateTime @updatedAt
 }
 
 model Reservation {

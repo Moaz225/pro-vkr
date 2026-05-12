@@ -4,11 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BRODSKY. — Панель менеджера</title>
+  <meta name="theme-color" content="#1a1a1a">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
-    body { background: #f0f0f0; padding: 20px; }
+    :root {
+      --bg-color: #f0f0f0;
+      --text-color: #1a1a1a;
+      --muted: #666666;
+      --dash-border: #eeeeee;
+      --comment-bg: #f5f5f5;
+      --tbl-head: #fafafa;
+      --danger-bg: #ffebee;
+      --danger-text: #c62828;
+      --light: #ffffff;
+      --border: #e8e8e8;
+      --section-bg: #ffffff;
+    }
+    body { background: var(--bg-color); color: var(--text-color); padding: 20px; }
     .manager-page { max-width: 1400px; margin: 0 auto; }
     .manager-header {
       display: flex;
@@ -42,7 +57,7 @@
       transition: var(--transition);
     }
     .manager-refresh:hover { background: var(--primary-dark); }
-    .manager-auto { font-size: .85rem; color: #666; margin-top: 4px; }
+    .manager-auto { font-size: .85rem; color: var(--muted); margin-top: 4px; }
     .sound-controls {
       display: inline-flex;
       align-items: center;
@@ -69,8 +84,9 @@
       align-items: center;
       gap: 8px;
       font-size: .9rem;
-      color: #444;
-      background: #fff;
+      color: var(--text-color);
+      background: var(--light);
+      border: 1px solid var(--border);
       padding: 8px 12px;
       border-radius: var(--radius-pill);
       box-shadow: var(--shadow-sm);
@@ -92,7 +108,7 @@
     }
     .stat-card h3 {
       font-size: .9rem;
-      color: #666;
+      color: var(--muted);
       margin: 0 0 8px 0;
       font-weight: 500;
     }
@@ -101,9 +117,7 @@
       font-weight: 700;
       color: var(--primary);
     }
-    .stat-card.payment-visa { border-left-color: #0066cc; }
-    .stat-card.payment-qr { border-left-color: #00a86b; }
-    .stat-card.payment-cash { border-left-color: #ff7700; }
+    .stat-card.payment-yookassa { border-left-color: #0066cc; }
     
     .tabs {
       display: flex;
@@ -119,7 +133,7 @@
       cursor: pointer;
       font-size: 1rem;
       font-weight: 500;
-      color: #666;
+      color: var(--muted);
       transition: var(--transition);
     }
     .tab-btn.active {
@@ -161,8 +175,8 @@
       gap: 12px;
       margin-bottom: 12px;
     }
-    .card-id { font-weight: 700; font-size: 1.1rem; color: var(--dark); }
-    .card-time { font-size: .9rem; color: #666; }
+    .card-id { font-weight: 700; font-size: 1.1rem; color: var(--text-color); }
+    .card-time { font-size: .9rem; color: var(--muted); }
     .card-status {
       padding: 4px 12px;
       border-radius: var(--radius-pill);
@@ -184,21 +198,21 @@
     }
     .order-items li {
       padding: 6px 0;
-      border-bottom: 1px dashed #eee;
+      border-bottom: 1px dashed var(--dash-border);
       display: flex;
       justify-content: space-between;
       gap: 12px;
     }
     .order-items li:last-child { border-bottom: none; }
     .order-total { font-weight: 700; font-size: 1.1rem; color: var(--primary); margin-top: 8px; }
-    .order-payment { font-size: .9rem; color: #666; margin-top: 4px; }
+    .order-payment { font-size: .9rem; color: var(--muted); margin-top: 4px; }
     .order-comment, .reservation-comment {
       margin-top: 10px;
       padding: 10px;
-      background: #f5f5f5;
+      background: var(--comment-bg);
       border-radius: var(--radius-sm);
       font-size: .9rem;
-      color: #333;
+      color: var(--text-color);
     }
     .reservation-details li {
       padding: 6px 0;
@@ -206,7 +220,7 @@
       justify-content: space-between;
       gap: 12px;
     }
-    .reservation-details strong { color: var(--dark); }
+    .reservation-details strong { color: var(--text-color); }
     
     .card-actions {
       display: flex;
@@ -232,28 +246,159 @@
     .manager-empty {
       text-align: center;
       padding: 48px 20px;
-      color: #666;
+      color: var(--muted);
     }
     .manager-error {
-      background: #ffebee;
-      color: #c62828;
+      background: var(--danger-bg);
+      color: var(--danger-text);
       padding: 12px;
       border-radius: var(--radius-md);
       margin-bottom: 16px;
+    }
+
+    .shift-reports-wrap {
+      background: var(--light);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 24px;
+    }
+    .shift-reports-wrap h2 {
+      margin: 0 0 14px;
+      color: var(--dark);
+      font-size: 1.15rem;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .shift-reports-table-wrap { overflow-x: auto; }
+    table.shift-reports-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+    .shift-reports-table th, .shift-reports-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; color: var(--text-color); }
+    .shift-reports-table th { background: var(--tbl-head); font-weight: 600; }
+    .manager-products h2.manager-settings-title { margin: 18px 0 12px; color: var(--text-color); }
+    .manager-products .manager-hint { color: var(--muted); font-size: .9rem; margin-bottom: 10px; }
+    .mgr-stop-card {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      background: var(--light);
+      border: 1px solid var(--border);
+      align-items: center;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+    .mgr-stop-card .muted { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+    .mgr-p-name { font-weight: 700; color: var(--text-color); }
+    .mgr-p-sub { margin-top: 6px; font-size: .9rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .mgr-add-product-details { margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--light); }
+    .mgr-add-product-details > summary.mgr-add-summary {
+      list-style: none; cursor: pointer; padding: 12px 14px; font-weight: 600; color: var(--text-color);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mgr-add-product-details > summary.mgr-add-summary::-webkit-details-marker { display: none; }
+    .mgr-add-product-details[open] > summary.mgr-add-summary { border-bottom: 1px solid var(--border); }
+    .mgr-add-product-details .mgr-add-inner { padding: 14px; }
+    .mgr-menu-toolbar { margin-bottom: 12px; }
+    .mgr-menu-toolbar input[type="search"] {
+      width: 100%; max-width: 420px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+      box-sizing: border-box; background: var(--light); color: var(--text-color); font: inherit;
+    }
+    .mgr-product-table-wrap {
+      max-height: min(52vh, 520px);
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--light);
+    }
+    .mgr-product-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .mgr-product-table th,
+    .mgr-product-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--text-color);
+    }
+    .mgr-product-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--tbl-head);
+      font-weight: 600;
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      color: var(--muted);
+    }
+    .mgr-product-table tr:last-child td { border-bottom: none; }
+    .mgr-product-table .col-price { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .mgr-product-table .col-actions { white-space: nowrap; text-align: right; }
+    .mgr-avail-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: .88rem;
+    }
+    .mgr-avail-switch input {
+      width: 44px;
+      height: 24px;
+      appearance: none;
+      background: #c62828;
+      border-radius: 999px;
+      position: relative;
+      transition: background .2s;
+      flex-shrink: 0;
+    }
+    .mgr-avail-switch input:checked { background: #2e7d32; }
+    .mgr-avail-switch input::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      top: 2px;
+      left: 2px;
+      transition: transform .2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    }
+    .mgr-avail-switch input:checked::before { transform: translateX(20px); }
+    .mgr-btn-delete {
+      padding: 8px 12px;
+      border: none;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      font-size: .85rem;
+      font-weight: 600;
+      background: #c62828;
+      color: #fff;
+      transition: var(--transition);
+    }
+    .mgr-btn-delete:hover { filter: brightness(1.08); }
+    .mgr-btn-delete:disabled { opacity: .5; cursor: not-allowed; }
+    @media (max-width: 640px) {
+      .mgr-product-table-wrap { max-height: 65vh; }
+      .mgr-product-table { font-size: .82rem; }
+      .mgr-product-table th, .mgr-product-table td { padding: 8px 10px; }
     }
   </style>
 </head>
 <body>
   <div class="manager-page">
+    <nav class="brodsky-app-nav" aria-label="Разделы приложения">
+      <a href="index.html"><i class="fas fa-utensils"></i> Меню</a>
+      <a href="staff-orders.html"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
+      <a href="cancellations.html"><i class="fas fa-undo-alt"></i> Отмены</a>
+    </nav>
     <div class="manager-header">
       <div>
-        <h1><i class="fas fa-chart-line"></i> Панель менеджера</h1>
+        <h1 style="margin:0;"><i class="fas fa-chart-line"></i> BRODSKY — Панель менеджера</h1>
         <p class="manager-auto">Обновление каждые 30 сек</p>
       </div>
       <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-        <a href="index.html"><i class="fas fa-home"></i> Меню</a>
-        <a href="cancellations.html"><i class="fas fa-hand-holding-usd"></i> Отмены и возвраты</a>
-        <a href="staff-orders.html"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
         <div class="sound-controls">
           <button type="button" class="sound-btn" id="btnSound" aria-label="Звуковые уведомления">
             <i class="fas fa-volume-high"></i> Звук: выкл
@@ -272,6 +417,71 @@
     <div id="managerError" class="manager-error" hidden></div>
     
     <div class="stats-grid" id="statsGrid"></div>
+
+    <section class="manager-products" id="menuManageSection" aria-labelledby="menuManageHeading">
+      <h2 id="menuManageHeading" class="manager-settings-title"><i class="fas fa-utensils"></i> Управление меню</h2>
+      <p class="manager-hint">Добавление позиций, стоп-лист и удаление (защита CSRF).</p>
+
+      <details class="mgr-add-product-details">
+        <summary class="mgr-add-summary"><i class="fas fa-plus-circle"></i> Добавить позицию</summary>
+        <div class="mgr-add-inner">
+          <div class="mgr-stop-card" style="display:block;border:none;">
+            <div style="display:grid;gap:10px;">
+              <label style="font-weight:600;color:var(--text-color);">Название<br><input id="pmName" type="text" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
+              <label style="font-weight:600;color:var(--text-color);">Описание<br><textarea id="pmDesc" rows="2" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;font:inherit;"></textarea></label>
+              <label style="font-weight:600;color:var(--text-color);">Цена (₽)<br><input id="pmPrice" type="number" min="1" step="1" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
+              <label style="font-weight:600;color:var(--text-color);">Категория<br><input id="pmCat" type="text" placeholder="coffee" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
+              <label style="font-weight:600;color:var(--text-color);">URL изображения<br><input id="pmImg" type="url" placeholder="https://..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
+            </div>
+            <button type="button" class="shift-btn" id="btnProductCreate" style="margin-top:14px;"><i class="fas fa-plus"></i> Добавить товар</button>
+            <span id="pmCreateSpinner" class="brodsky-spinner" style="display:none;margin-left:10px;vertical-align:middle" aria-hidden="true"></span>
+            <p id="pmFormError" class="manager-error" hidden style="margin-top:10px;"></p>
+          </div>
+        </div>
+      </details>
+
+      <div class="mgr-menu-toolbar">
+        <input type="search" id="mgrProductSearch" placeholder="Поиск по названию..." autocomplete="off" aria-label="Поиск по названию">
+      </div>
+
+      <div class="mgr-product-table-wrap" role="region" aria-label="Список товаров">
+        <table class="mgr-product-table">
+          <thead>
+            <tr>
+              <th scope="col">Название</th>
+              <th scope="col" class="col-price">Цена</th>
+              <th scope="col">Статус</th>
+              <th scope="col" class="col-actions">Действия</th>
+            </tr>
+          </thead>
+          <tbody id="mgrProductTableBody"></tbody>
+        </table>
+      </div>
+      <div id="mgrProductTableEmpty" class="manager-empty" hidden>
+        <p>Нет товаров по запросу или список пуст.</p>
+      </div>
+    </section>
+
+    <div class="shift-reports-wrap" id="shiftReportsSection">
+      <h2><i class="fas fa-file-invoice"></i> Отчёты по сменам</h2>
+      <div id="shiftReportsTableWrap" class="shift-reports-table-wrap">
+        <table class="shift-reports-table" aria-label="Отчёты по сменам">
+          <thead>
+            <tr>
+              <th>Сотрудник</th>
+              <th>Дата</th>
+              <th>Заказов</th>
+              <th>Выручка</th>
+              <th>Средний чек</th>
+            </tr>
+          </thead>
+          <tbody id="shiftReportsBody"></tbody>
+        </table>
+      </div>
+      <div id="shiftReportsEmpty" class="manager-empty" hidden>
+        <p>Отчётов по сменам пока нет.</p>
+      </div>
+    </div>
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="orders">Заказы и оплаты</button>
@@ -293,24 +503,43 @@
     </div>
   </div>
 
+  <script src="toast.js"></script>
+  <script src="pwa.js"></script>
   <script>
     // API base:
     // - On Render/production: use same-origin (no hardcoded localhost).
     // - If opened via file://, set window.MANAGER_API_BASE manually.
     const API_BASE = window.MANAGER_API_BASE
       || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
+
     const ORDERS_URL = API_BASE + '/api/orders';
     const RESERVATIONS_URL = API_BASE + '/api/reservations';
     const REFRESH_INTERVAL = 30000;
 
     let csrfToken = null;
-    async function ensureCsrfToken() {
-      if (csrfToken) return csrfToken;
-      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+    async function ensureCsrfToken(forceRefresh) {
+      if (!forceRefresh && csrfToken) return csrfToken;
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include', cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.csrfToken) throw new Error('CSRF token missing');
       csrfToken = data.csrfToken;
       return csrfToken;
+    }
+
+    function invalidateCsrfToken() {
+      csrfToken = null;
+    }
+
+    /** Runs fetchFn(token); on 403 clears CSRF and retries once with a fresh token. */
+    async function fetchWithCsrfRetry(fetchFn) {
+      let token = await ensureCsrfToken();
+      let res = await fetchFn(token);
+      if (res.status === 403) {
+        invalidateCsrfToken();
+        token = await ensureCsrfToken(true);
+        res = await fetchFn(token);
+      }
+      return res;
     }
 
     const statsGrid = document.getElementById('statsGrid');
@@ -319,6 +548,9 @@
     const ordersEmpty = document.getElementById('ordersEmpty');
     const reservationsEmpty = document.getElementById('reservationsEmpty');
     const managerError = document.getElementById('managerError');
+    const shiftReportsSection = document.getElementById('shiftReportsSection');
+    const shiftReportsBody = document.getElementById('shiftReportsBody');
+    const shiftReportsEmpty = document.getElementById('shiftReportsEmpty');
     const btnRefresh = document.getElementById('btnRefresh');
     const btnSound = document.getElementById('btnSound');
     const soundVolume = document.getElementById('soundVolume');
@@ -416,7 +648,10 @@
     }
 
     function paymentLabel(method) {
-      return { visa: 'Visa', qr: 'QR-код', cash: 'Наличные' }[method] || method;
+      if (method === 'visa' || method === 'qr' || method === 'cash') {
+        return 'Онлайн (YooKassa)';
+      }
+      return method || '—';
     }
 
     function statusLabel(status) {
@@ -443,14 +678,212 @@
       return div.innerHTML;
     }
 
+    const mgrProductTableBody = document.getElementById('mgrProductTableBody');
+    const mgrProductTableEmpty = document.getElementById('mgrProductTableEmpty');
+    const mgrProductSearch = document.getElementById('mgrProductSearch');
+    let cachedProducts = [];
+
+    function getProductSearchQuery() {
+      return ((mgrProductSearch && mgrProductSearch.value) || '').trim().toLowerCase();
+    }
+
+    function productsMatchingSearch() {
+      const q = getProductSearchQuery();
+      let list = (cachedProducts || []).slice();
+      if (q) {
+        list = list.filter((p) => String(p.name || '').toLowerCase().includes(q));
+      }
+      return list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
+    }
+
+    function setProductRowBusy(tr, busy) {
+      if (!tr) return;
+      tr.querySelectorAll('button,input').forEach((el) => {
+        el.disabled = Boolean(busy);
+      });
+      const sp = tr.querySelector('[data-spinner]');
+      if (sp) sp.style.visibility = busy ? 'visible' : 'hidden';
+    }
+
+    function renderProductTable() {
+      if (!mgrProductTableBody || !mgrProductTableEmpty) return;
+      const products = productsMatchingSearch();
+      mgrProductTableBody.innerHTML = '';
+      if (!cachedProducts.length) {
+        mgrProductTableEmpty.hidden = false;
+        mgrProductTableEmpty.querySelector('p').textContent = 'Товары не найдены.';
+        return;
+      }
+      if (!products.length) {
+        mgrProductTableEmpty.hidden = false;
+        mgrProductTableEmpty.querySelector('p').textContent = 'Нет товаров по этому запросу.';
+        return;
+      }
+      mgrProductTableEmpty.hidden = true;
+
+      products.forEach((p) => {
+        const tr = document.createElement('tr');
+        const pid = p.id;
+        const avail = Boolean(p.isAvailable);
+        tr.innerHTML =
+          '<td><div class="mgr-p-name">' + escapeHtml(p.name) + '</div>'
+          + '<div class="muted" style="font-size:.8rem;margin-top:4px;">' + escapeHtml(p.category || '') + '</div></td>'
+          + '<td class="col-price">' + escapeHtml(String(Number(p.price))) + ' ₽</td>'
+          + '<td>'
+          + '<label class="mgr-avail-switch">'
+          + '<input type="checkbox" class="mgr-avail-toggle"' + (avail ? ' checked' : '') + '>'
+          + '<span class="mgr-avail-caption">' + (avail ? 'В наличии' : 'Нет') + '</span>'
+          + '<span data-spinner style="visibility:hidden" class="brodsky-spinner" aria-hidden="true"></span>'
+          + '</label>'
+          + '</td>'
+          + '<td class="col-actions"><button type="button" class="mgr-btn-delete btn-del-product"><i class="fas fa-trash"></i> Удалить</button></td>';
+
+        const toggle = tr.querySelector('.mgr-avail-toggle');
+        toggle.setAttribute('aria-label', 'Наличие: ' + String(p.name || ''));
+
+        toggle.addEventListener('change', async () => {
+          const next = Boolean(toggle.checked);
+          setProductRowBusy(tr, true);
+          try {
+            await patchAvailability(pid, next);
+            if (typeof showToast === 'function') {
+              showToast('Статус обновлён', 'success');
+            }
+            await loadProductsAvailability();
+          } catch (e) {
+            toggle.checked = !next;
+            if (typeof showToast === 'function') showToast(e.message || 'Ошибка', 'error');
+          } finally {
+            setProductRowBusy(tr, false);
+          }
+        });
+
+        tr.querySelector('.btn-del-product').addEventListener('click', () => deleteProduct(pid));
+
+        mgrProductTableBody.appendChild(tr);
+      });
+    }
+
+    async function deleteProduct(productId) {
+      if (!productId || !confirm('Удалить товар из базы? Это действие необратимо.')) return;
+      try {
+        const res = await fetchWithCsrfRetry((token) =>
+          fetch(API_BASE + '/api/products/' + encodeURIComponent(productId), {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'X-CSRF-Token': token }
+          })
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось удалить');
+        if (typeof showToast === 'function') showToast('Продукт удалён', 'success');
+        await loadProductsAvailability();
+      } catch (e) {
+        if (typeof showToast === 'function') showToast(e.message || 'Ошибка', 'error');
+      }
+    }
+
+    async function patchAvailability(productId, isAvailable) {
+      const res = await fetchWithCsrfRetry((token) =>
+        fetch(API_BASE + '/api/products/' + encodeURIComponent(productId) + '/availability', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+          credentials: 'include',
+          body: JSON.stringify({ isAvailable })
+        })
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error((data && data.error) || 'Не удалось обновить наличие');
+      }
+      return data.product;
+    }
+
+    async function loadProductsAvailability() {
+      if (!mgrProductTableBody) return;
+      mgrProductTableBody.innerHTML =
+        '<tr><td colspan="4"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div></td></tr>'.repeat(3);
+      if (mgrProductTableEmpty) mgrProductTableEmpty.hidden = true;
+
+      try {
+        const res = await fetch(API_BASE + '/api/products', { credentials: 'include', cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось загрузить товары');
+        cachedProducts = data.products || [];
+        renderProductTable();
+      } catch (e) {
+        cachedProducts = [];
+        renderProductTable();
+        if (typeof showToast === 'function') showToast(e.message || 'Не удалось загрузить товары', 'error');
+      }
+    }
+
+    if (mgrProductSearch) {
+      mgrProductSearch.addEventListener('input', () => renderProductTable());
+    }
+
+    function formatRub(n) {
+      const x = typeof n === 'number' ? n : parseFloat(String(n));
+      if (!Number.isFinite(x)) return '0 ₽';
+      const dec = x.toFixed(2);
+      const parts = dec.split('.');
+      const intSpaced = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return intSpaced + ',' + parts[1] + ' ₽';
+    }
+
+    function renderShiftReports(reports) {
+      if (!shiftReportsSection) return;
+      const tableWrap = document.getElementById('shiftReportsTableWrap');
+      shiftReportsBody.innerHTML = '';
+      if (!reports || reports.length === 0) {
+        shiftReportsSection.hidden = false;
+        if (tableWrap) tableWrap.hidden = true;
+        shiftReportsEmpty.hidden = false;
+        return;
+      }
+      shiftReportsSection.hidden = false;
+      if (tableWrap) tableWrap.hidden = false;
+      shiftReportsEmpty.hidden = true;
+
+      reports.forEach((r) => {
+        const created = new Date(r.createdAt);
+        const dateLabel = Number.isFinite(created.getTime())
+          ? created.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+          : String(r.createdAt);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + escapeHtml(r.staffName) + '</td>'
+          + '<td>' + escapeHtml(dateLabel) + '</td>'
+          + '<td>' + Number(r.orderCount || 0) + '</td>'
+          + '<td>' + escapeHtml(formatRub(r.totalRevenue)) + '</td>'
+          + '<td>' + escapeHtml(formatRub(r.averageOrder)) + '</td>';
+        shiftReportsBody.appendChild(tr);
+      });
+    }
+
+    async function loadShiftReports() {
+      try {
+        const rRes = await fetch(API_BASE + '/api/shift-reports', { cache: 'no-store' });
+        const rData = await rRes.json().catch(() => ({}));
+        if (rRes.ok && rData && rData.success) {
+          renderShiftReports(rData.reports || []);
+        } else {
+          renderShiftReports([]);
+        }
+      } catch (_) {
+        renderShiftReports([]);
+      }
+    }
+
     function renderStats(ordersList, reservationsList) {
       const totalOrders = ordersList.length;
       // Revenue should reflect only completed orders.
       const paidOrders = ordersList.filter(o => o.status === 'done');
       const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-      const visaTotal = paidOrders.filter(o => o.paymentMethod === 'visa').reduce((sum, o) => sum + (o.total || 0), 0);
-      const qrTotal = paidOrders.filter(o => o.paymentMethod === 'qr').reduce((sum, o) => sum + (o.total || 0), 0);
-      const cashTotal = paidOrders.filter(o => o.paymentMethod === 'cash').reduce((sum, o) => sum + (o.total || 0), 0);
+      const yooTotal = paidOrders
+        .filter(o => o.paymentMethod === 'visa' || o.paymentMethod === 'qr' || o.paymentMethod === 'cash')
+        .reduce((sum, o) => sum + (o.total || 0), 0);
       const pendingReservations = reservationsList.filter(r => r.status === 'pending').length;
 
       statsGrid.innerHTML = `
@@ -462,17 +895,9 @@
           <h3>Общая выручка</h3>
           <div class="stat-value">${totalRevenue.toFixed(0)}₽</div>
         </div>
-        <div class="stat-card payment-visa">
-          <h3>Visa</h3>
-          <div class="stat-value">${visaTotal.toFixed(0)}₽</div>
-        </div>
-        <div class="stat-card payment-qr">
-          <h3>QR-код</h3>
-          <div class="stat-value">${qrTotal.toFixed(0)}₽</div>
-        </div>
-        <div class="stat-card payment-cash">
-          <h3>Наличные</h3>
-          <div class="stat-value">${cashTotal.toFixed(0)}₽</div>
+        <div class="stat-card payment-yookassa">
+          <h3>YooKassa (онлайн)</h3>
+          <div class="stat-value">${yooTotal.toFixed(0)}₽</div>
         </div>
         <div class="stat-card">
           <h3>Ожидают подтверждения</h3>
@@ -586,7 +1011,13 @@
 
     async function fetchAll() {
       btnRefresh.disabled = true;
+      void loadShiftReports();
       try {
+        // Skeletons for initial load
+        statsGrid.innerHTML = '<div class="stat-card"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div><div style="margin-top:10px" class="brodsky-skeleton brodsky-skeleton-line md"></div></div>'.repeat(4);
+        ordersContainer.innerHTML = '<div class="order-card"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div><div style="margin-top:10px" class="brodsky-skeleton brodsky-skeleton-line md"></div><div style="margin-top:8px" class="brodsky-skeleton brodsky-skeleton-line sm"></div></div>'.repeat(4);
+        reservationsContainer.innerHTML = '<div class="reservation-card"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div><div style="margin-top:10px" class="brodsky-skeleton brodsky-skeleton-line md"></div><div style="margin-top:8px" class="brodsky-skeleton brodsky-skeleton-line sm"></div></div>'.repeat(3);
+
         const [ordersRes, reservationsRes] = await Promise.all([
           fetch(ORDERS_URL),
           fetch(RESERVATIONS_URL)
@@ -616,13 +1047,70 @@
         renderStats(ordersList, reservationsList);
         renderOrders(ordersList);
         renderReservations(reservationsList);
+
+        // Stop-list UI: toggles product availability.
+        await loadProductsAvailability();
       } catch (e) {
         showError('Не удалось загрузить данные. Убедитесь, что сервер запущен (npm start в папке server). ' + e.message);
         renderStats([], []);
         renderOrders([]);
         renderReservations([]);
+      } finally {
+        btnRefresh.disabled = false;
       }
-      btnRefresh.disabled = false;
+    }
+
+    const btnProductCreate = document.getElementById('btnProductCreate');
+    if (btnProductCreate) {
+      btnProductCreate.addEventListener('click', async () => {
+        const errEl = document.getElementById('pmFormError');
+        const spin = document.getElementById('pmCreateSpinner');
+        if (errEl) {
+          errEl.hidden = true;
+          errEl.textContent = '';
+        }
+        if (spin) spin.style.display = '';
+        btnProductCreate.disabled = true;
+        try {
+          const body = {
+            name: (document.getElementById('pmName') && document.getElementById('pmName').value) || '',
+            description: (document.getElementById('pmDesc') && document.getElementById('pmDesc').value) || '',
+            price: (document.getElementById('pmPrice') && document.getElementById('pmPrice').value) || '',
+            category: (document.getElementById('pmCat') && document.getElementById('pmCat').value) || '',
+            imageUrl: (document.getElementById('pmImg') && document.getElementById('pmImg').value) || ''
+          };
+          const res = await fetchWithCsrfRetry((token) =>
+            fetch(API_BASE + '/api/products', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+              body: JSON.stringify(body)
+            })
+          );
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось создать товар');
+          if (typeof showToast === 'function') showToast('Продукт добавлен', 'success');
+          const nm = document.getElementById('pmName');
+          const dc = document.getElementById('pmDesc');
+          const pr = document.getElementById('pmPrice');
+          const ct = document.getElementById('pmCat');
+          const im = document.getElementById('pmImg');
+          if (nm) nm.value = '';
+          if (dc) dc.value = '';
+          if (pr) pr.value = '';
+          if (ct) ct.value = '';
+          if (im) im.value = '';
+          await loadProductsAvailability();
+        } catch (e) {
+          if (errEl) {
+            errEl.textContent = e.message || 'Ошибка';
+            errEl.hidden = false;
+          }
+        } finally {
+          if (spin) spin.style.display = 'none';
+          btnProductCreate.disabled = false;
+        }
+      });
     }
 
     btnRefresh.addEventListener('click', fetchAll);

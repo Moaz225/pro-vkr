@@ -13,8 +13,8 @@ services:
     branch: master
     autoDeploy: true
 
-    buildCommand: npm install && npx prisma generate --schema prisma/schema.prisma
-    startCommand: npx prisma migrate deploy --schema prisma/schema.prisma && node server/server.js
+    buildCommand: npm install && npx prisma migrate deploy --schema prisma/schema.prisma && npx prisma generate --schema prisma/schema.prisma
+    startCommand: node server/server.js
     healthCheckPath: /health
 
     envVars:
@@ -62,4 +62,3 @@ services:
 
       # Optional: Nodemailer for cancellation / refund emails. Add in the Render Dashboard
       # if needed: SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, MAIL_FROM, MAIL_TO_MANAGER.
-

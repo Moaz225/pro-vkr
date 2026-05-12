@@ -28,42 +28,93 @@ document.addEventListener('DOMContentLoaded', () => {
     || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
 
   let csrfToken = null;
-  async function ensureCsrfToken() {
-    if (csrfToken) return csrfToken;
-    const res = await fetch(apiBase + '/api/csrf', { credentials: 'include' });
+  let csrfFetchInflight = null;
+
+  function syncGlobalCsrf() {
+    if (typeof window !== 'undefined') window.csrfToken = csrfToken;
+  }
+
+  async function fetchCsrfFromServer() {
+    if (!apiBase) throw new Error('Нет адреса API');
+    const res = await fetch(apiBase + '/api/csrf', {
+      credentials: 'include',
+      cache: 'no-store'
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.csrfToken) {
       throw new Error('Не удалось получить CSRF токен');
     }
     csrfToken = data.csrfToken;
+    syncGlobalCsrf();
     return csrfToken;
   }
 
-  async function fetchJson(url, options = {}) {
+  /** Force a new token (e.g. after 403 CSRF). */
+  async function refreshCsrfToken() {
+    csrfFetchInflight = null;
+    csrfToken = null;
+    syncGlobalCsrf();
+    return ensureCsrfToken(true);
+  }
+
+  /**
+   * @param {boolean} [forceRefresh] fetch new token even if cached
+   */
+  async function ensureCsrfToken(forceRefresh = false) {
+    if (forceRefresh) {
+      csrfFetchInflight = null;
+      csrfToken = null;
+      syncGlobalCsrf();
+    }
+    if (csrfToken) return csrfToken;
+    if (!csrfFetchInflight) {
+      csrfFetchInflight = fetchCsrfFromServer().finally(() => {
+        csrfFetchInflight = null;
+      });
+    }
+    return csrfFetchInflight;
+  }
+
+  function isLikelyCsrfFailure(res, data) {
+    if (res.status !== 403) return false;
+    const msg = String((data && data.error) || '').toLowerCase();
+    return msg.includes('csrf') || msg.includes('ebadcsrftoken');
+  }
+
+  async function fetchJson(url, options = {}, isCsrfRetry = false) {
     const method = (options.method || 'GET').toUpperCase();
     const isStateChanging = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
 
     const headers = Object.assign({}, options.headers || {});
     if (!headers['Content-Type'] && options.body) headers['Content-Type'] = 'application/json';
 
-    const finalOptions = Object.assign(
-      {
-        credentials: 'include'
-      },
-      options,
-      {
-        headers
-      }
-    );
-
     if (isStateChanging) {
       const token = await ensureCsrfToken();
-      finalOptions.headers['X-CSRF-Token'] = token;
+      headers['X-CSRF-Token'] = token;
     }
+
+    const finalOptions = Object.assign({}, options, {
+      credentials: 'include',
+      headers
+    });
 
     const res = await fetch(url, finalOptions);
     const data = await res.json().catch(() => ({}));
+
+    if (
+      !isCsrfRetry &&
+      isStateChanging &&
+      isLikelyCsrfFailure(res, data)
+    ) {
+      await refreshCsrfToken();
+      return fetchJson(url, options, true);
+    }
+
     return { res, data };
+  }
+
+  if (apiBase) {
+    ensureCsrfToken().catch(() => {});
   }
 
   function saveUserSession(session) {
@@ -396,14 +447,23 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify(reservation)
         });
         if (res.ok && data.success) {
-          alert(`Спасибо, ${reservation.name}! Заявка на бронирование отправлена.\n\nНомер бронирования: ${data.reservationId || ''}\nАдминистратор свяжется с вами для подтверждения.`);
+          if (typeof showToast === 'function') {
+            showToast(
+              `Спасибо, ${reservation.name}! Заявка на бронирование отправлена.\nНомер бронирования: ${data.reservationId || ''}\nАдминистратор свяжется с вами для подтверждения.`,
+              'success'
+            );
+          }
           reservationForm.reset();
           closeReservationModal();
         } else {
-          alert('Ошибка отправки бронирования. Попробуйте позже или позвоните нам.');
+          if (typeof showToast === 'function') {
+            showToast('Ошибка отправки бронирования. Попробуйте позже или позвоните нам.', 'error');
+          }
         }
       } catch (err) {
-        alert('Сервер недоступен. Пожалуйста, позвоните нам для бронирования столика.');
+        if (typeof showToast === 'function') {
+          showToast('Сервер недоступен. Пожалуйста, позвоните нам для бронирования столика.', 'error');
+        }
       }
       if (submitBtn) submitBtn.disabled = false;
     });
@@ -498,6 +558,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let dbProductsLoaded = false;
   let dbProductsByNormalized = new Map(); // normalizedName -> product[]
   let dbProductKeys = []; // normalizedName keys sorted by length desc
+  let availabilityLoaded = false;
+  let availabilityByNormalized = new Map(); // normalizedName -> boolean (isAvailable)
+  let availabilityKeys = []; // keys sorted by length desc
 
   function buildDbLookup(products) {
     dbProductsByNormalized = new Map();
@@ -524,6 +587,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function buildAvailabilityLookup(products) {
+    availabilityByNormalized = new Map();
+    for (const p of products || []) {
+      const key = normalizeName(String(p.name || ""));
+      if (!key) continue;
+      availabilityByNormalized.set(key, Boolean(p.isAvailable));
+    }
+    availabilityKeys = [...availabilityByNormalized.keys()].sort((a, b) => b.length - a.length);
+    availabilityLoaded = true;
+  }
+
+  async function loadAvailability() {
+    try {
+      const res = await fetch(apiBase + '/api/products/availability', { credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) return;
+      buildAvailabilityLookup(data.products || []);
+      applyAvailabilityToMenu();
+    } catch (e) {
+      // Availability is best-effort; UI should still work.
+    }
+  }
+
   function normalizeName(name) {
     return name
       .toLowerCase()
@@ -540,6 +626,57 @@ document.addEventListener('DOMContentLoaded', () => {
   // Trigger async loading of product images from DB.
   // We do not block UI interactions; the first image may use fallback until the data arrives.
   loadDbProducts();
+  loadAvailability();
+
+  function getAvailabilityByNormalized(normalized) {
+    if (!availabilityLoaded) return null;
+    if (availabilityByNormalized.has(normalized)) return availabilityByNormalized.get(normalized);
+    for (const key of availabilityKeys) {
+      if (normalized.startsWith(key)) return availabilityByNormalized.get(key);
+    }
+    return null;
+  }
+
+  function ensureSoldOutBadge(el) {
+    if (!el || el.querySelector('.brodsky-soldout-badge')) return;
+    const badge = document.createElement('span');
+    badge.className = 'brodsky-soldout-badge';
+    badge.textContent = 'Закончилось';
+    badge.style.position = 'absolute';
+    badge.style.top = '10px';
+    badge.style.right = '10px';
+    badge.style.background = 'rgba(198,40,40,.95)';
+    badge.style.color = '#fff';
+    badge.style.padding = '6px 10px';
+    badge.style.borderRadius = '999px';
+    badge.style.fontSize = '.78rem';
+    badge.style.fontWeight = '700';
+    badge.style.boxShadow = '0 6px 18px rgba(0,0,0,.18)';
+    badge.style.zIndex = '2';
+    el.style.position = el.style.position || 'relative';
+    el.appendChild(badge);
+  }
+
+  function applyAvailabilityToMenu() {
+    if (!availabilityLoaded) return;
+    const items = document.querySelectorAll('.menu-card, .meal-item');
+    items.forEach((el) => {
+      const nameEl = el.querySelector('.item-name') || el.querySelector('.meal-name');
+      if (!nameEl) return;
+      const rawNameNode = nameEl.childNodes[0];
+      const baseName = (rawNameNode && rawNameNode.textContent ? rawNameNode.textContent : nameEl.textContent).trim();
+      const normalized = normalizeName(baseName);
+      const avail = getAvailabilityByNormalized(normalized);
+      if (avail === false) {
+        el.dataset.isAvailable = '0';
+        ensureSoldOutBadge(el);
+        el.style.opacity = '0.7';
+      } else if (avail === true) {
+        el.dataset.isAvailable = '1';
+        el.style.opacity = '';
+      }
+    });
+  }
 
   function findDbProductByNormalized(normalized) {
     if (!dbProductsLoaded) return null;
@@ -592,6 +729,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const metaKey = Object.keys(productMeta).find(key => normalized.startsWith(key));
     const meta = metaKey ? productMeta[metaKey] : null;
 
+    const avail = getAvailabilityByNormalized(normalized);
+    const isSoldOut = avail === false;
+
     productInfoName.textContent = baseName;
     productInfoDescription.textContent = meta && meta.description ? meta.description : description || 'Описание будет добавлено позже.';
     productInfoCalories.textContent = meta && meta.calories ? meta.calories : 'Информация уточняется.';
@@ -603,7 +743,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const qtyEl = document.getElementById('productInfoQty');
     if (qtyEl) qtyEl.value = '1';
 
+    // Sold-out UI: disable add-to-cart.
+    if (productInfoAddToCart) {
+      productInfoAddToCart.disabled = Boolean(isSoldOut);
+      productInfoAddToCart.style.opacity = isSoldOut ? '0.6' : '';
+      productInfoAddToCart.title = isSoldOut ? 'Товар временно недоступен (стоп-лист)' : '';
+    }
+
     if (productInfoImage) {
+      const wrap = productInfoImage.closest('.product-info-image-wrap');
+      if (wrap) wrap.classList.add('brodsky-skeleton');
+
       // Reset fallback flag for this render.
       productInfoImage.dataset.fallbackApplied = '0';
 
@@ -615,7 +765,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // If remote image fails to load, switch to the local default.
       // Prevent infinite loops using a data flag.
+      productInfoImage.onload = () => {
+        if (wrap) wrap.classList.remove('brodsky-skeleton');
+      };
       productInfoImage.onerror = () => {
+        if (wrap) wrap.classList.remove('brodsky-skeleton');
         if (productInfoImage.dataset.fallbackApplied === '1') return;
         productInfoImage.dataset.fallbackApplied = '1';
         productInfoImage.src = DEFAULT_PRODUCT_IMAGE;
@@ -657,6 +811,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const cart = {
     items: [],
     add(name, price, qty = 1) {
+      // Final guard: stop-list enforcement in UI (server enforces too).
+      const normalized = normalizeName(name);
+      const avail = getAvailabilityByNormalized(normalized);
+      if (avail === false) {
+        if (typeof showToast === 'function') showToast('Эта позиция сейчас недоступна (стоп-лист).', 'warning');
+        return false;
+      }
       const id = name;
       const existing = this.items.find(i => i.name === name);
       if (existing) {
@@ -666,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       this.save();
       renderCart();
+      return true;
     },
     remove(name) {
       this.items = this.items.filter(i => i.name !== name);
@@ -754,7 +916,11 @@ document.addEventListener('DOMContentLoaded', () => {
     productInfoAddToCart.addEventListener('click', () => {
       const qty = Math.max(1, parseInt(productInfoQty?.value || '1', 10));
       if (currentProductForCart.name && currentProductForCart.price > 0) {
-        cart.add(currentProductForCart.name, currentProductForCart.price, qty);
+        const nm = currentProductForCart.name;
+        const added = cart.add(currentProductForCart.name, currentProductForCart.price, qty);
+        if (added && typeof showToast === 'function') {
+          showToast('✅ ' + nm + ' добавлен в корзину', 'success', 3500);
+        }
         closeProductInfoModal();
       }
     });
@@ -824,8 +990,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnPay) {
     btnPay.addEventListener('click', async () => {
-      const method = document.querySelector('input[name="paymentMethod"]:checked');
-      const paymentMethod = method ? method.value : 'cash';
+      const paymentMethod = 'visa';
       const tableNumberEl = document.getElementById('tableNumber');
       const tableNumber = tableNumberEl ? tableNumberEl.value.trim() : '';
       const orderCommentEl = document.getElementById('orderComment');
@@ -838,7 +1003,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tableNumber: tableNumber || undefined
       };
 
+      const payBtnHtml = btnPay.innerHTML;
+      let checkoutRedirecting = false;
       btnPay.disabled = true;
+      btnPay.innerHTML = '<span class="brodsky-spinner" style="vertical-align:middle;margin-right:10px"></span> Обработка…';
       try {
         // 1) Create an order first (status = pending). Frontend must NOT mark it as paid.
         const { res, data } = await fetchJson(apiBase + '/api/orders', {
@@ -847,7 +1015,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (!res.ok || !data.success || !data.orderId) {
-          alert(data && data.error ? data.error : 'Ошибка создания заказа. Попробуйте позже.');
+          if (typeof showToast === 'function') {
+            const msg =
+              res.status === 403 && data && data.error
+                ? data.error
+                : data && data.error
+                  ? data.error
+                  : 'Ошибка создания заказа. Попробуйте позже.';
+            showToast(msg, res.status === 403 ? 'warning' : 'error');
+          }
           return;
         }
 
@@ -861,18 +1037,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (!paymentRes.ok || !paymentData.success || !paymentData.confirmationUrl) {
-          alert(paymentData && paymentData.error ? paymentData.error : 'Ошибка создания оплаты. Попробуйте позже.');
+          if (typeof showToast === 'function') {
+            showToast(paymentData && paymentData.error ? paymentData.error : 'Ошибка создания оплаты. Попробуйте позже.', 'error');
+          }
           return;
         }
 
         // Clear the cart now (payment is in progress). Payment final state is controlled by webhook.
         cart.clear();
         closeCheckout();
+        checkoutRedirecting = true;
         window.location.href = paymentData.confirmationUrl;
       } catch (err) {
-        alert('Сервер недоступен. Заказ можно оплатить на кассе (наличные, карта или QR).');
+        if (typeof showToast === 'function') {
+          showToast('Сервер недоступен. Попробуйте позже или обратитесь к администратору.', 'warning');
+        }
+      } finally {
+        if (!checkoutRedirecting) {
+          btnPay.disabled = false;
+          btnPay.innerHTML = payBtnHtml;
+        }
       }
-      btnPay.disabled = false;
     });
   }
 

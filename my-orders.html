@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BRODSKY. — Мои заказы</title>
+  <meta name="theme-color" content="#1a1a1a">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -91,9 +93,14 @@
 </head>
 <body>
   <div class="mo-page">
+    <nav class="brodsky-app-nav" aria-label="Разделы приложения">
+      <a href="index.html"><i class="fas fa-utensils"></i> Меню</a>
+      <a href="staff-orders.html"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
+      <a href="cancellations.html"><i class="fas fa-undo-alt"></i> Отмены</a>
+      <a href="my-orders.html" class="is-current"><i class="fas fa-receipt"></i> Мои заказы</a>
+    </nav>
     <div class="mo-header">
-      <h1><i class="fas fa-receipt"></i> Мои заказы</h1>
-      <a href="index.html"><i class="fas fa-arrow-left"></i> К меню</a>
+      <h1 style="margin:0;"><i class="fas fa-receipt"></i> BRODSKY — Мои заказы</h1>
     </div>
     <p id="moAuthMsg" class="mo-error" hidden></p>
     <div id="moList" class="orders-list"></div>
@@ -133,12 +140,18 @@
         <p id="moFormError" class="mo-error" hidden></p>
         <div class="mo-modal-actions">
           <button type="button" class="mo-btn mo-btn-secondary" id="moCancelClose">Закрыть</button>
-          <button type="submit" class="mo-btn" id="moSubmit"><i class="fas fa-paper-plane"></i> Отправить</button>
+          <button type="submit" class="mo-btn" id="moSubmit"><span id="moSubmitSpinner" class="brodsky-spinner" style="display:none;margin-right:8px;vertical-align:middle" aria-hidden="true"></span><i class="fas fa-paper-plane"></i> Отправить</button>
         </div>
       </form>
     </div>
   </div>
 
+  <script src="toast.js"></script>
+  <script src="pwa.js"></script>
+  <script src="order-ready.js"></script>
+  <script>
+    window.brodskyBootstrapOrderReady && window.brodskyBootstrapOrderReady(window.BRODSKY_MY_ORDERS_API_BASE || '');
+  </script>
   <script>
     const API_BASE = window.BRODSKY_MY_ORDERS_API_BASE
       || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
@@ -157,13 +170,51 @@
     };
 
     let csrfToken = null;
-    async function ensureCsrfToken() {
-      if (csrfToken) return csrfToken;
-      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+    let csrfFetchInflight = null;
+
+    function syncGlobalCsrf() {
+      window.csrfToken = csrfToken;
+    }
+
+    async function fetchCsrfFromServer() {
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include', cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.csrfToken) throw new Error('Не удалось получить CSRF');
       csrfToken = data.csrfToken;
+      syncGlobalCsrf();
       return csrfToken;
+    }
+
+    async function refreshCsrfToken() {
+      csrfFetchInflight = null;
+      csrfToken = null;
+      syncGlobalCsrf();
+      return ensureCsrfToken(true);
+    }
+
+    async function ensureCsrfToken(forceRefresh) {
+      if (forceRefresh) {
+        csrfFetchInflight = null;
+        csrfToken = null;
+        syncGlobalCsrf();
+      }
+      if (csrfToken) return csrfToken;
+      if (!csrfFetchInflight) {
+        csrfFetchInflight = fetchCsrfFromServer().finally(function () {
+          csrfFetchInflight = null;
+        });
+      }
+      return csrfFetchInflight;
+    }
+
+    function isCsrf403(res, data) {
+      if (res.status !== 403) return false;
+      var msg = String((data && data.error) || '').toLowerCase();
+      return msg.indexOf('csrf') !== -1;
+    }
+
+    if (API_BASE) {
+      ensureCsrfToken(false).catch(function () {});
     }
 
     const moAuthMsg = document.getElementById('moAuthMsg');
@@ -179,6 +230,7 @@
     const moCancelForm = document.getElementById('moCancelForm');
     const moCancelClose = document.getElementById('moCancelClose');
     const moSubmit = document.getElementById('moSubmit');
+    const moSubmitSpinner = document.getElementById('moSubmitSpinner');
 
     let cancelTargetId = null;
 
@@ -283,20 +335,31 @@
       }
 
       moSubmit.disabled = true;
+      if (moSubmitSpinner) moSubmitSpinner.style.display = 'inline-block';
       try {
-        const token = await ensureCsrfToken();
         const fd = new FormData();
         fd.append('reason', reason);
         fd.append('description', moDesc.value.trim());
         if (moProof.files && moProof.files[0]) fd.append('proof', moProof.files[0]);
 
-        const res = await fetch(API_BASE + '/api/orders/' + encodeURIComponent(cancelTargetId) + '/cancel', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'X-CSRF-Token': token },
-          body: fd
-        });
-        const data = await res.json().catch(() => ({}));
+        async function postCancel(token) {
+          return fetch(API_BASE + '/api/orders/' + encodeURIComponent(cancelTargetId) + '/cancel', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'X-CSRF-Token': token },
+            body: fd
+          });
+        }
+
+        let token = await ensureCsrfToken(false);
+        let res = await postCancel(token);
+        let data = await res.json().catch(() => ({}));
+        if (isCsrf403(res, data)) {
+          await refreshCsrfToken();
+          token = await ensureCsrfToken(false);
+          res = await postCancel(token);
+          data = await res.json().catch(() => ({}));
+        }
         if (!res.ok || !data.success) {
           moFormError.textContent = (data && data.error) || 'Не удалось отправить запрос';
           moFormError.hidden = false;
@@ -309,6 +372,7 @@
         moFormError.hidden = false;
       } finally {
         moSubmit.disabled = false;
+        if (moSubmitSpinner) moSubmitSpinner.style.display = 'none';
       }
     });
 
@@ -370,6 +434,9 @@
         moAuthMsg.hidden = false;
         return;
       }
+
+      moList.innerHTML =
+        '<div class="mo-card"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div><div style="margin-top:10px" class="brodsky-skeleton brodsky-skeleton-line md"></div><div style="margin-top:8px" class="brodsky-skeleton brodsky-skeleton-line sm"></div></div>'.repeat(4);
 
       const meRes = await fetch(API_BASE + '/api/auth/me', { credentials: 'include' });
       if (!meRes.ok) {

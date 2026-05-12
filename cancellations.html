@@ -4,11 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BRODSKY. — Запросы на отмену</title>
+  <meta name="theme-color" content="#1a1a1a">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <style>
-    body { background: #f0f0f0; padding: 20px; }
+    :root {
+      --bg-color: #f0f0f0;
+      --text-color: #1a1a1a;
+      --card-bg: #ffffff;
+      --border-color: #e8e8e8;
+      --muted: #666666;
+      --table-head: #fafafa;
+      --cx-denied-bg: #fff3e0;
+    }
+    body { background: var(--bg-color); color: var(--text-color); padding: 20px; }
     .cx-page { max-width: 1200px; margin: 0 auto; }
     .cx-header {
       display: flex;
@@ -28,11 +39,11 @@
       gap: 8px;
     }
     .cx-header a:hover { text-decoration: underline; }
-    .cx-denied { background: #fff3e0; border: 1px solid #ffcc80; padding: 16px; border-radius: 12px; color: #e65100; }
-    .cx-table-wrap { overflow-x: auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .cx-denied { background: var(--cx-denied-bg); border: 1px solid var(--border-color); padding: 16px; border-radius: 12px; color: var(--primary); }
+    .cx-table-wrap { overflow-x: auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
     table.cx-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
-    .cx-table th, .cx-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
-    .cx-table th { background: #fafafa; font-weight: 600; }
+    .cx-table th, .cx-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: top; color: var(--text-color); }
+    .cx-table th { background: var(--table-head); font-weight: 600; }
     .cx-proof-thumb { max-width: 120px; max-height: 80px; border-radius: 6px; object-fit: cover; }
     .cx-actions { display: flex; flex-direction: column; gap: 8px; min-width: 140px; }
     .cx-btn {
@@ -50,9 +61,9 @@
     .cx-btn-no { background: #c62828; color: #fff; }
     .cx-reject-box { margin-top: 8px; display: none; }
     .cx-reject-box.open { display: block; }
-    .cx-reject-box textarea { width: 100%; min-height: 64px; font: inherit; padding: 8px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+    .cx-reject-box textarea { width: 100%; min-height: 64px; font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); box-sizing: border-box; background: var(--card-bg); color: var(--text-color); }
     .cx-error { color: #c62828; font-size: .9rem; margin: 8px 0; }
-    .cx-empty { text-align: center; padding: 40px; color: #666; }
+    .cx-empty { text-align: center; padding: 40px; color: var(--muted); }
     .cx-refresh {
       padding: 8px 16px;
       background: var(--primary);
@@ -66,12 +77,17 @@
 </head>
 <body>
   <div class="cx-page">
+    <nav class="brodsky-app-nav" aria-label="Разделы приложения">
+      <a href="index.html"><i class="fas fa-utensils"></i> Меню</a>
+      <a href="staff-orders.html"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
+      <a href="cancellations.html" class="is-current"><i class="fas fa-undo-alt"></i> Отмены</a>
+      <a href="my-orders.html"><i class="fas fa-receipt"></i> Мои заказы</a>
+    </nav>
     <div class="cx-header">
-      <h1><i class="fas fa-undo-alt"></i> Запросы на отмену</h1>
+      <h1 style="margin:0;"><i class="fas fa-undo-alt"></i> BRODSKY — Запросы на отмену</h1>
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-        <a href="manager.html"><i class="fas fa-chart-line"></i> Панель менеджера</a>
-        <a href="index.html"><i class="fas fa-home"></i> Меню</a>
         <button type="button" class="cx-refresh" id="cxRefresh"><i class="fas fa-sync-alt"></i> Обновить</button>
+        <span id="cxBusySpinner" class="brodsky-spinner brodsky-spinner--dark" style="display:none;vertical-align:middle" aria-hidden="true"></span>
       </div>
     </div>
 
@@ -103,6 +119,8 @@
     </div>
   </div>
 
+  <script src="toast.js"></script>
+  <script src="pwa.js"></script>
   <script>
     const API_BASE = window.BRODSKY_CANCELLATIONS_API_BASE
       || ((location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : '');
@@ -118,13 +136,51 @@
     };
 
     let csrfToken = null;
-    async function ensureCsrfToken() {
-      if (csrfToken) return csrfToken;
-      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include' });
+    let csrfFetchInflight = null;
+
+    function syncGlobalCsrf() {
+      window.csrfToken = csrfToken;
+    }
+
+    async function fetchCsrfFromServer() {
+      const res = await fetch(API_BASE + '/api/csrf', { credentials: 'include', cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.csrfToken) throw new Error('CSRF');
       csrfToken = data.csrfToken;
+      syncGlobalCsrf();
       return csrfToken;
+    }
+
+    async function refreshCsrfToken() {
+      csrfFetchInflight = null;
+      csrfToken = null;
+      syncGlobalCsrf();
+      return ensureCsrfToken(true);
+    }
+
+    async function ensureCsrfToken(forceRefresh) {
+      if (forceRefresh) {
+        csrfFetchInflight = null;
+        csrfToken = null;
+        syncGlobalCsrf();
+      }
+      if (csrfToken) return csrfToken;
+      if (!csrfFetchInflight) {
+        csrfFetchInflight = fetchCsrfFromServer().finally(function () {
+          csrfFetchInflight = null;
+        });
+      }
+      return csrfFetchInflight;
+    }
+
+    function isCsrf403(res, data) {
+      if (res.status !== 403) return false;
+      var msg = String((data && data.error) || '').toLowerCase();
+      return msg.indexOf('csrf') !== -1;
+    }
+
+    if (API_BASE) {
+      ensureCsrfToken(false).catch(function () {});
     }
 
     const cxDenied = document.getElementById('cxDenied');
@@ -135,6 +191,13 @@
     const cxEmpty = document.getElementById('cxEmpty');
     const cxError = document.getElementById('cxError');
     const cxRefresh = document.getElementById('cxRefresh');
+    const cxBusySpinner = document.getElementById('cxBusySpinner');
+
+    function setCxBusy(busy) {
+      if (cxBusySpinner) cxBusySpinner.style.display = busy ? 'inline-block' : 'none';
+      if (cxRefresh) cxRefresh.disabled = busy;
+      cxBody.querySelectorAll('button').forEach((b) => { b.disabled = busy; });
+    }
 
     function isImageProof(path) {
       return /\.(jpe?g|png|webp)$/i.test(path || '');
@@ -205,15 +268,25 @@
 
     async function doApprove(orderId) {
       cxError.hidden = true;
+      setCxBusy(true);
       try {
-        const token = await ensureCsrfToken();
-        const res = await fetch(API_BASE + '/api/cancellations/' + encodeURIComponent(orderId) + '/approve', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-          body: '{}'
-        });
-        const data = await res.json().catch(() => ({}));
+        async function postApprove(token) {
+          return fetch(API_BASE + '/api/cancellations/' + encodeURIComponent(orderId) + '/approve', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+            body: '{}'
+          });
+        }
+        var token = await ensureCsrfToken(false);
+        var res = await postApprove(token);
+        var data = await res.json().catch(() => ({}));
+        if (isCsrf403(res, data)) {
+          await refreshCsrfToken();
+          token = await ensureCsrfToken(false);
+          res = await postApprove(token);
+          data = await res.json().catch(() => ({}));
+        }
         if (!res.ok || !data.success) {
           cxError.textContent = (data && data.error) || 'Ошибка одобрения';
           cxError.hidden = false;
@@ -223,6 +296,8 @@
       } catch (e) {
         cxError.textContent = e.message || 'Сеть';
         cxError.hidden = false;
+      } finally {
+        setCxBusy(false);
       }
     }
 
@@ -233,15 +308,26 @@
         return;
       }
       cxError.hidden = true;
+      setCxBusy(true);
       try {
-        const token = await ensureCsrfToken();
-        const res = await fetch(API_BASE + '/api/cancellations/' + encodeURIComponent(orderId) + '/reject', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-          body: JSON.stringify({ rejectionReason: reason })
-        });
-        const data = await res.json().catch(() => ({}));
+        var body = JSON.stringify({ rejectionReason: reason });
+        async function postReject(token) {
+          return fetch(API_BASE + '/api/cancellations/' + encodeURIComponent(orderId) + '/reject', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+            body: body
+          });
+        }
+        var token = await ensureCsrfToken(false);
+        var res = await postReject(token);
+        var data = await res.json().catch(() => ({}));
+        if (isCsrf403(res, data)) {
+          await refreshCsrfToken();
+          token = await ensureCsrfToken(false);
+          res = await postReject(token);
+          data = await res.json().catch(() => ({}));
+        }
         if (!res.ok || !data.success) {
           cxError.textContent = (data && data.error) || 'Ошибка';
           cxError.hidden = false;
@@ -251,21 +337,20 @@
       } catch (e) {
         cxError.textContent = e.message || 'Сеть';
         cxError.hidden = false;
+      } finally {
+        setCxBusy(false);
       }
     }
 
     async function loadPending() {
+      if (cxRefresh) cxRefresh.disabled = true;
       cxError.hidden = true;
+      cxBody.innerHTML =
+        '<tr><td colspan="6"><div class="brodsky-skeleton brodsky-skeleton-line lg"></div><div style="margin-top:10px" class="brodsky-skeleton brodsky-skeleton-line md"></div></td></tr>'.repeat(5);
       const res = await fetch(API_BASE + '/api/cancellations/pending', { credentials: 'include' });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 403) {
-        cxDenied.hidden = false;
-        cxDeniedTitle.innerHTML = '<strong>Нет доступа.</strong> Нужна роль менеджера.';
-        cxDeniedHint.hidden = false;
-        cxMain.hidden = true;
-        return;
-      }
       if (!res.ok || !data.success) {
+        if (cxRefresh) cxRefresh.disabled = false;
         cxError.textContent = (data && data.error) || 'Не удалось загрузить список';
         cxError.hidden = false;
         return;
@@ -273,6 +358,7 @@
       cxDenied.hidden = true;
       cxMain.hidden = false;
       renderRows(data.cancellations || []);
+      if (cxRefresh) cxRefresh.disabled = false;
     }
 
     async function init() {
@@ -281,22 +367,7 @@
         cxError.hidden = false;
         return;
       }
-      const meRes = await fetch(API_BASE + '/api/auth/me', { credentials: 'include' });
-      if (!meRes.ok) {
-        cxDenied.hidden = false;
-        cxDeniedTitle.innerHTML = '<strong>Не выполнен вход.</strong> Откройте меню и войдите в аккаунт.';
-        cxDeniedHint.hidden = true;
-        cxMain.hidden = true;
-        return;
-      }
-      cxDeniedHint.hidden = false;
-      const me = await meRes.json().catch(() => ({}));
-      if (!me.user || me.user.role !== 'manager') {
-        cxDenied.hidden = false;
-        cxDeniedTitle.innerHTML = '<strong>Нет доступа.</strong> Нужна роль менеджера.';
-        cxMain.hidden = true;
-        return;
-      }
+      cxDenied.hidden = true;
       await loadPending();
     }
 

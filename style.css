@@ -50,6 +50,98 @@ body {
   position: relative;
 }
 
+/* ===== Toast notifications (Phase 1) ===== */
+.brodsky-toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 5000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(520px, calc(100vw - 24px));
+  pointer-events: none;
+}
+.brodsky-toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  background: rgba(17, 17, 17, .95);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.08);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+}
+.brodsky-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.brodsky-toast.is-hiding {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.brodsky-toast__text {
+  font-size: .95rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+.brodsky-toast__close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,.9);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  margin: -2px 0 0;
+}
+.brodsky-toast__close:hover { color: #fff; }
+.brodsky-toast--success { border-left: 4px solid #2e7d32; }
+.brodsky-toast--error { border-left: 4px solid #c62828; }
+.brodsky-toast--warning { border-left: 4px solid #f9a825; }
+.brodsky-toast--info { border-left: 4px solid #1565c0; }
+
+/* ===== Loaders & skeletons (Phase 1) ===== */
+.brodsky-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: rgba(255,255,255,1);
+  display: inline-block;
+  animation: brodskySpin 0.8s linear infinite;
+}
+.brodsky-spinner--dark {
+  border: 2px solid rgba(0,0,0,.12);
+  border-top-color: var(--primary);
+}
+@keyframes brodskySpin { to { transform: rotate(360deg); } }
+
+.brodsky-skeleton {
+  background: linear-gradient(90deg, rgba(0,0,0,.06) 25%, rgba(0,0,0,.12) 37%, rgba(0,0,0,.06) 63%);
+  background-size: 400% 100%;
+  animation: brodskySkeleton 1.2s ease-in-out infinite;
+  border-radius: 12px;
+}
+@keyframes brodskySkeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+.brodsky-skeleton-line { height: 12px; border-radius: 8px; }
+.brodsky-skeleton-line.sm { height: 10px; width: 40%; }
+.brodsky-skeleton-line.md { height: 12px; width: 70%; }
+.brodsky-skeleton-line.lg { height: 14px; width: 90%; }
+
+
 @supports (-webkit-touch-callout: none) {
   /* iOS: отключить fixed-прикрепление */
   body {
@@ -1436,4 +1528,35 @@ footer {
   .auth-card {
     max-width: 100%;
   }
+}
+
+/* Staff/manager shared top navigation */
+.brodsky-app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+.brodsky-app-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: var(--transition);
+}
+.brodsky-app-nav a:hover {
+  background: rgba(255, 119, 0, 0.12);
+}
+.brodsky-app-nav a.is-current {
+  font-weight: 700;
+  color: var(--primary-dark);
+  border-color: rgba(255, 119, 0, 0.45);
+  background: rgba(255, 119, 0, 0.14);
 }
