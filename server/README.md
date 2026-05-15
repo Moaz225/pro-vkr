@@ -32,6 +32,10 @@ npm start
 | POST | `/api/orders` | Принять заказ (вызывается с сайта после нажатия «Оплатить») |
 | GET  | `/api/orders` | Список всех заказов (для работников) |
 | PATCH| `/api/orders/:orderId` | Обновить статус заказа: `{ "status": "in_progress" }` или `"done"` |
+| GET | `/api/products` | Каталог товаров (по умолчанию без архива) |
+| GET | `/api/analytics/sales?from=&to=` | Дневная выручка и число заказов (только Manager) |
+
+Панель менеджера: **http://localhost:3000/manager.html**
 
 ## Где смотреть заказы
 

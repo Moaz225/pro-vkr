@@ -21,6 +21,149 @@ document.addEventListener('DOMContentLoaded', () => {
   const authSubmitBtn = document.getElementById('authSubmitBtn');
   const changeUserBtn = document.getElementById('changeUserBtn');
 
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s == null ? '' : s;
+    return div.innerHTML;
+  }
+
+  const BRODSKY_TOP_MENU_IDS = ['coffee', 'seasonal', 'tea', 'cocoa', 'fresh'];
+  const BRODSKY_MEALS_SUBMENU_IDS = [
+    'meals-breakfasts',
+    'meals-curd',
+    'meals-pancakes',
+    'meals-toasts',
+    'meals-salads',
+    'meals-pasta',
+    'meals-pizza',
+    'meals-soups',
+    'meals-desserts'
+  ];
+  const BRODSKY_VALID_MENU_CATEGORY = new Set([...BRODSKY_TOP_MENU_IDS, ...BRODSKY_MEALS_SUBMENU_IDS]);
+  const BRODSKY_SPY_TARGET_IDS = [...BRODSKY_TOP_MENU_IDS, ...BRODSKY_MEALS_SUBMENU_IDS];
+
+  let userScrollLockUntil = 0;
+  function lockUserScroll(ms) {
+    userScrollLockUntil = Date.now() + (ms || 650);
+  }
+
+  function normalizeMenuCategorySlug(cat) {
+    const c = String(cat || '').trim();
+    if (BRODSKY_VALID_MENU_CATEGORY.has(c)) return c;
+    return c || 'coffee';
+  }
+
+  function ensureCategorySection(slug, label) {
+    const id = normalizeMenuCategorySlug(slug);
+    if (BRODSKY_VALID_MENU_CATEGORY.has(id)) return id;
+    if (!menuCatalogRoot) return id;
+    let sec = document.getElementById(id);
+    if (!sec) {
+      sec = document.createElement('section');
+      sec.id = id;
+      sec.className = 'menu-section';
+      sec.innerHTML =
+        '<h2 class="section-title">' + escapeHtml(label || id) + '</h2>'
+        + '<div class="menu-grid"></div>';
+      menuCatalogRoot.appendChild(sec);
+      BRODSKY_VALID_MENU_CATEGORY.add(id);
+      BRODSKY_SPY_TARGET_IDS.push(id);
+    }
+    const nav = document.querySelector('.category-nav');
+    if (nav && !nav.querySelector('[data-target="' + id + '"]')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'category-btn';
+      btn.dataset.target = id;
+      btn.textContent = label || id;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.category-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (searchInput) searchInput.value = '';
+        document.querySelectorAll('.menu-card, .meal-item').forEach((i) => (i.style.display = ''));
+        lockUserScroll(700);
+        showSection(id);
+      });
+      nav.appendChild(btn);
+    }
+    return id;
+  }
+
+  function getMenuContainerForCategory(slug) {
+    if (slug.startsWith('meals-')) {
+      const block = document.getElementById(slug);
+      return block ? block.querySelector('.meal-items') : null;
+    }
+    const sec = document.getElementById(slug);
+    return sec ? sec.querySelector('.menu-grid') : null;
+  }
+
+  function renderMenuFromProducts(products) {
+    const byCat = new Map();
+    for (const id of BRODSKY_VALID_MENU_CATEGORY) byCat.set(id, []);
+    for (const p of products || []) {
+      let slug = normalizeMenuCategorySlug(p.category);
+      if (!BRODSKY_VALID_MENU_CATEGORY.has(slug)) {
+        slug = ensureCategorySection(slug, String(p.category || slug));
+      }
+      if (!byCat.has(slug)) byCat.set(slug, []);
+      byCat.get(slug).push(p);
+    }
+    for (const slug of byCat.keys()) {
+      const container = getMenuContainerForCategory(slug);
+      if (!container) continue;
+      container.innerHTML = '';
+      const list = [...(byCat.get(slug) || [])].sort((a, b) =>
+        String(a.name || '').localeCompare(String(b.name || ''), 'ru')
+      );
+      for (const p of list) {
+        const price = Math.round(Number(p.price));
+        const name = String(p.name || '').trim();
+        const desc = String(p.description || '—').trim();
+        const pid = String(p.id || '');
+        if (!name || !Number.isFinite(price) || price <= 0) continue;
+        if (slug.startsWith('meals-')) {
+          const el = document.createElement('div');
+          el.className = 'meal-item';
+          el.style.cursor = 'pointer';
+          if (pid) el.dataset.productId = pid;
+          el.dataset.productName = name;
+          el.dataset.productPrice = String(price);
+          const descBlock =
+            desc && desc !== '—'
+              ? `<div class="meal-description">${escapeHtml(desc)}</div>`
+              : '';
+          el.innerHTML =
+            `<div class="meal-name">${escapeHtml(name)}<span class="meal-price">${price}₽</span></div>` +
+            descBlock;
+          container.appendChild(el);
+        } else {
+          const el = document.createElement('div');
+          el.className = 'menu-card';
+          el.style.cursor = 'pointer';
+          if (pid) el.dataset.productId = pid;
+          el.dataset.productName = name;
+          el.dataset.productPrice = String(price);
+          el.innerHTML =
+            `<div class="card-header"><span class="item-name">${escapeHtml(name)}</span><span class="item-price">${price}₽</span></div>` +
+            `<div class="card-body"><div class="item-description"><span class="ru-name">${escapeHtml(desc)}</span></div></div>`;
+          container.appendChild(el);
+        }
+      }
+    }
+  }
+
+  const menuCatalogRoot = document.getElementById('brodskyMenuCatalog');
+  if (menuCatalogRoot && !menuCatalogRoot.dataset.brodskyMenuClickBound) {
+    menuCatalogRoot.dataset.brodskyMenuClickBound = '1';
+    menuCatalogRoot.addEventListener('click', (e) => {
+      const item = e.target.closest('.menu-card, .meal-item');
+      if (!item || !menuCatalogRoot.contains(item)) return;
+      if (e.target.closest('a, button')) return;
+      showProductInfoFromElement(item);
+    });
+  }
+
   // API base:
   // - On Render/production: use relative paths (same-origin).
   // - If opened via file://, you can set window.BRODSKY_API_BASE manually.
@@ -306,8 +449,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Сброс поиска
       if (searchInput) searchInput.value = '';
-      document.querySelectorAll('.menu-card, .meal-item').forEach(i => i.style.display = '');
+      document.querySelectorAll('.menu-card, .meal-item').forEach(i => (i.style.display = ''));
 
+      lockUserScroll(700);
       showSection(target);
     });
   });
@@ -553,19 +697,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Product images are now sourced from the database (GET /api/products).
-  // We build an in-memory lookup by normalized name to match the clicked item.
+  // Catalog: GET /api/products → DOM render + lookups (images, modal, стоп-лист).
   let dbProductsLoaded = false;
-  let dbProductsByNormalized = new Map(); // normalizedName -> product[]
-  let dbProductKeys = []; // normalizedName keys sorted by length desc
+  let dbProductsByNormalized = new Map();
+  let dbProductKeys = [];
+  let productsById = new Map();
   let availabilityLoaded = false;
-  let availabilityByNormalized = new Map(); // normalizedName -> boolean (isAvailable)
-  let availabilityKeys = []; // keys sorted by length desc
+  let availabilityByNormalized = new Map();
+  let availabilityByProductId = new Map();
+  let availabilityKeys = [];
+
+  function normalizeName(name) {
+    return name
+      .toLowerCase()
+      .replace(/[0-9]/g, '')
+      .replace(/₽/g, '')
+      .replace(/\s*г\b/g, ' ')
+      .replace(/\s*мл\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
   function buildDbLookup(products) {
     dbProductsByNormalized = new Map();
     for (const p of products || []) {
-      const key = normalizeName(String(p.name || ""));
+      const key = normalizeName(String(p.name || ''));
       if (!key) continue;
       const arr = dbProductsByNormalized.get(key) || [];
       arr.push(p);
@@ -575,27 +731,53 @@ document.addEventListener('DOMContentLoaded', () => {
     dbProductsLoaded = true;
   }
 
+  function buildAvailabilityMapsFromProducts(products) {
+    availabilityByNormalized = new Map();
+    availabilityByProductId = new Map();
+    for (const p of products || []) {
+      const key = normalizeName(String(p.name || ''));
+      if (key) availabilityByNormalized.set(key, Boolean(p.isAvailable));
+      if (p.id) availabilityByProductId.set(String(p.id), Boolean(p.isAvailable));
+    }
+    availabilityKeys = [...availabilityByNormalized.keys()].sort((a, b) => b.length - a.length);
+    availabilityLoaded = true;
+  }
+
+  function buildAvailabilityLookupMinimal(products) {
+    availabilityByNormalized = new Map();
+    for (const p of products || []) {
+      const key = normalizeName(String(p.name || ''));
+      if (key) availabilityByNormalized.set(key, Boolean(p.isAvailable));
+    }
+    availabilityKeys = [...availabilityByNormalized.keys()].sort((a, b) => b.length - a.length);
+    availabilityLoaded = true;
+  }
+
+  function syncAvailabilityProductIdsFromDom() {
+    document.querySelectorAll('.menu-card[data-product-id], .meal-item[data-product-id]').forEach((el) => {
+      const id = el.dataset.productId;
+      const nm = normalizeName(el.dataset.productName || '');
+      if (!id || !nm) return;
+      const avail = getAvailabilityByNormalized(nm);
+      if (avail === true || avail === false) availabilityByProductId.set(id, avail);
+    });
+  }
+
   async function loadDbProducts() {
     try {
       const res = await fetch(apiBase + '/api/products', { credentials: 'include' });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) return;
       const products = data.products || [];
+      productsById = new Map(products.filter((p) => p.id).map((p) => [String(p.id), p]));
       buildDbLookup(products);
-      console.log('[BRODSKY] Loaded products for images:', products.length);
+      buildAvailabilityMapsFromProducts(products);
+      renderMenuFromProducts(products);
+      applyAvailabilityToMenu();
+      console.log('[BRODSKY] Loaded / rendered products:', products.length);
     } catch (e) {
-      console.warn('[BRODSKY] Could not load /api/products. Falling back to remote meta images.', e);
+      console.warn('[BRODSKY] Could not load /api/products.', e);
     }
-  }
-
-  function buildAvailabilityLookup(products) {
-    availabilityByNormalized = new Map();
-    for (const p of products || []) {
-      const key = normalizeName(String(p.name || ""));
-      if (!key) continue;
-      availabilityByNormalized.set(key, Boolean(p.isAvailable));
-    }
-    availabilityKeys = [...availabilityByNormalized.keys()].sort((a, b) => b.length - a.length);
-    availabilityLoaded = true;
   }
 
   async function loadAvailability() {
@@ -603,28 +785,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch(apiBase + '/api/products/availability', { credentials: 'include' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) return;
-      buildAvailabilityLookup(data.products || []);
+      buildAvailabilityLookupMinimal(data.products || []);
+      syncAvailabilityProductIdsFromDom();
       applyAvailabilityToMenu();
     } catch (e) {
       // Availability is best-effort; UI should still work.
     }
   }
 
-  function normalizeName(name) {
-    return name
-      .toLowerCase()
-      .replace(/[0-9]/g, '')
-      // Remove common currency/unit suffixes without destroying characters inside words.
-      // Example: "Маргарита 360 г" -> "маргарита" (do not remove "г" from "маргарита").
-      .replace(/₽/g, '')
-      .replace(/\s*г\b/g, ' ')
-      .replace(/\s*мл\b/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  // Trigger async loading of product images from DB.
-  // We do not block UI interactions; the first image may use fallback until the data arrives.
   loadDbProducts();
   loadAvailability();
 
@@ -637,42 +805,44 @@ document.addEventListener('DOMContentLoaded', () => {
     return null;
   }
 
+  function getAvailabilityForMenuEl(el) {
+    const pid = el.dataset && el.dataset.productId;
+    if (pid && availabilityByProductId.has(pid)) return availabilityByProductId.get(pid);
+    const nameEl = el.querySelector('.item-name') || el.querySelector('.meal-name');
+    if (!nameEl) return null;
+    const rawNameNode = nameEl.childNodes[0];
+    const baseName = (rawNameNode && rawNameNode.textContent ? rawNameNode.textContent : nameEl.textContent).trim();
+    return getAvailabilityByNormalized(normalizeName(baseName));
+  }
+
   function ensureSoldOutBadge(el) {
     if (!el || el.querySelector('.brodsky-soldout-badge')) return;
     const badge = document.createElement('span');
     badge.className = 'brodsky-soldout-badge';
-    badge.textContent = 'Закончилось';
-    badge.style.position = 'absolute';
-    badge.style.top = '10px';
-    badge.style.right = '10px';
-    badge.style.background = 'rgba(198,40,40,.95)';
-    badge.style.color = '#fff';
-    badge.style.padding = '6px 10px';
-    badge.style.borderRadius = '999px';
-    badge.style.fontSize = '.78rem';
-    badge.style.fontWeight = '700';
-    badge.style.boxShadow = '0 6px 18px rgba(0,0,0,.18)';
-    badge.style.zIndex = '2';
-    el.style.position = el.style.position || 'relative';
+    badge.textContent = 'Нет в наличии';
+    el.classList.add('is-sold-out');
     el.appendChild(badge);
+  }
+
+  function clearSoldOutBadge(el) {
+    if (!el) return;
+    const b = el.querySelector('.brodsky-soldout-badge');
+    if (b) b.remove();
+    el.classList.remove('is-sold-out');
   }
 
   function applyAvailabilityToMenu() {
     if (!availabilityLoaded) return;
     const items = document.querySelectorAll('.menu-card, .meal-item');
     items.forEach((el) => {
-      const nameEl = el.querySelector('.item-name') || el.querySelector('.meal-name');
-      if (!nameEl) return;
-      const rawNameNode = nameEl.childNodes[0];
-      const baseName = (rawNameNode && rawNameNode.textContent ? rawNameNode.textContent : nameEl.textContent).trim();
-      const normalized = normalizeName(baseName);
-      const avail = getAvailabilityByNormalized(normalized);
+      const avail = getAvailabilityForMenuEl(el);
       if (avail === false) {
         el.dataset.isAvailable = '0';
         ensureSoldOutBadge(el);
         el.style.opacity = '0.7';
       } else if (avail === true) {
         el.dataset.isAvailable = '1';
+        clearSoldOutBadge(el);
         el.style.opacity = '';
       }
     });
@@ -702,6 +872,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function parsePriceFromElement(element) {
+    const dp = element.dataset && element.dataset.productPrice;
+    if (dp != null && String(dp).trim() !== '') {
+      const n = parseInt(dp, 10);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
     const priceEl = element.querySelector('.item-price') || element.querySelector('.meal-price');
     if (!priceEl) return 0;
     const match = priceEl.textContent.match(/\d+/);
@@ -718,8 +893,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!nameEl) return;
 
-    const rawNameNode = nameEl.childNodes[0];
-    const baseName = (rawNameNode && rawNameNode.textContent ? rawNameNode.textContent : nameEl.textContent).trim();
+    let baseName = (element.dataset && element.dataset.productName) || '';
+    if (!baseName) {
+      const rawNameNode = nameEl.childNodes[0];
+      baseName = (rawNameNode && rawNameNode.textContent ? rawNameNode.textContent : nameEl.textContent).trim();
+    }
     const description = descEl ? descEl.textContent.trim() : '';
     const price = parsePriceFromElement(element);
 
@@ -729,13 +907,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const metaKey = Object.keys(productMeta).find(key => normalized.startsWith(key));
     const meta = metaKey ? productMeta[metaKey] : null;
 
-    const avail = getAvailabilityByNormalized(normalized);
+    let dbProduct = null;
+    const pid = element.dataset && element.dataset.productId;
+    let avail = null;
+    if (pid && availabilityByProductId.has(pid)) avail = availabilityByProductId.get(pid);
+    else avail = getAvailabilityByNormalized(normalized);
     const isSoldOut = avail === false;
 
+    if (pid && productsById.has(pid)) dbProduct = productsById.get(pid);
+    if (!dbProduct) dbProduct = findDbProductByNormalized(normalized);
+
     productInfoName.textContent = baseName;
-    productInfoDescription.textContent = meta && meta.description ? meta.description : description || 'Описание будет добавлено позже.';
+    const dbDesc = dbProduct && dbProduct.description && String(dbProduct.description).trim() !== '—'
+      ? String(dbProduct.description).trim()
+      : '';
+    const dbIng = dbProduct && dbProduct.ingredients ? String(dbProduct.ingredients).trim() : '';
+    productInfoDescription.textContent = dbDesc
+      || (meta && meta.description ? meta.description : '')
+      || description
+      || 'Описание будет добавлено позже.';
     productInfoCalories.textContent = meta && meta.calories ? meta.calories : 'Информация уточняется.';
-    productInfoIngredients.textContent = meta && meta.ingredients ? meta.ingredients : 'Состав скоро будет доступен.';
+    productInfoIngredients.textContent = dbIng
+      || (meta && meta.ingredients ? meta.ingredients : '')
+      || 'Состав скоро будет доступен.';
 
     const priceEl = document.getElementById('productInfoPrice');
     if (priceEl) priceEl.textContent = price ? price + '₽' : '—';
@@ -757,7 +951,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset fallback flag for this render.
       productInfoImage.dataset.fallbackApplied = '0';
 
-      const dbProduct = findDbProductByNormalized(normalized);
+      if (!dbProduct) {
+        if (pid && productsById.has(pid)) dbProduct = productsById.get(pid);
+        if (!dbProduct) dbProduct = findDbProductByNormalized(normalized);
+      }
       const nextSrc = (dbProduct && dbProduct.imageUrl)
         ? dbProduct.imageUrl
         : (meta && meta.image ? meta.image : DEFAULT_PRODUCT_IMAGE);
@@ -778,12 +975,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openProductInfoModal();
   }
-
-  const clickableItems = document.querySelectorAll('.menu-card, .meal-item');
-  clickableItems.forEach(item => {
-    item.style.cursor = 'pointer';
-    item.addEventListener('click', () => showProductInfoFromElement(item));
-  });
 
   if (productInfoSection) {
     productInfoSection.addEventListener('click', (e) => {
@@ -906,11 +1097,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
-  function escapeHtml(s) {
-    const div = document.createElement('div');
-    div.textContent = s == null ? '' : s;
-    return div.innerHTML;
-  }
 
   if (productInfoAddToCart) {
     productInfoAddToCart.addEventListener('click', () => {
@@ -962,7 +1148,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const checkoutTotal = document.getElementById('checkoutTotal');
   const btnPay = document.getElementById('btnPay');
 
+  function requireRegisteredUserForCheckout() {
+    const s = loadUserSession();
+    if (s && s.mode === 'guest') {
+      if (typeof showToast === 'function') {
+        showToast('Войдите или зарегистрируйтесь, чтобы оформить заказ.', 'warning');
+      }
+      showAuthOverlay();
+      const em = document.getElementById('authEmail');
+      if (em) setTimeout(() => em.focus(), 150);
+      return false;
+    }
+    return true;
+  }
+
   function openCheckout() {
+    if (!requireRegisteredUserForCheckout()) return;
     if (cart.getCount() === 0) return;
     if (!checkoutModal) return;
     if (checkoutSummary) {
@@ -990,6 +1191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnPay) {
     btnPay.addEventListener('click', async () => {
+      if (!requireRegisteredUserForCheckout()) return;
       const paymentMethod = 'visa';
       const tableNumberEl = document.getElementById('tableNumber');
       const tableNumber = tableNumberEl ? tableNumberEl.value.trim() : '';
@@ -1059,6 +1261,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+  }
+
+  function setActiveCategoryButton(targetId) {
+    buttons.forEach((b) => {
+      const t = b.dataset.target || b.dataset.category;
+      b.classList.toggle('active', t === targetId);
+    });
+  }
+
+  const scrollSpyEls = BRODSKY_SPY_TARGET_IDS.map((id) => document.getElementById(id)).filter(Boolean);
+  const scrollSpyVisibility = new Map();
+  if (scrollSpyEls.length && typeof IntersectionObserver !== 'undefined') {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const en of entries) {
+          if (en.target && en.target.id) scrollSpyVisibility.set(en.target.id, en.intersectionRatio);
+        }
+        if (Date.now() < userScrollLockUntil) return;
+        if (searchInput && searchInput.value.trim()) return;
+        let bestId = null;
+        let bestRatio = -1;
+        for (const el of scrollSpyEls) {
+          const r = scrollSpyVisibility.get(el.id) || 0;
+          if (r > bestRatio) {
+            bestRatio = r;
+            bestId = el.id;
+          }
+        }
+        if (bestId && bestRatio > 0.02) setActiveCategoryButton(bestId);
+      },
+      {
+        root: null,
+        rootMargin: '-14% 0px -58% 0px',
+        threshold: [0, 0.02, 0.06, 0.12, 0.2, 0.35, 0.55, 0.75, 1]
+      }
+    );
+    scrollSpyEls.forEach((el) => io.observe(el));
   }
 
   // Один обработчик ESC: закрывает верхнее открытое окно (приоритет: оплата → корзина → товар → бронь)

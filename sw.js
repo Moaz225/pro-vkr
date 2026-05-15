@@ -4,7 +4,7 @@
  * - Cache /api/products (menu metadata) for offline fallback
  */
 
-const VERSION = 'v4';
+const VERSION = 'v6';
 const STATIC_CACHE = `brodsky-static-${VERSION}`;
 const API_CACHE = `brodsky-api-${VERSION}`;
 

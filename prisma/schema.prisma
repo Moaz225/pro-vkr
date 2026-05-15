@@ -143,13 +143,16 @@ model Product {
   id          String   @id @default(cuid())
   name        String
   description String
+  ingredients String?
   price       Decimal
   category    String
   imageUrl    String
   isAvailable Boolean  @default(true)
+  isArchived  Boolean  @default(false)
 
   @@index([category])
   @@index([name])
+  @@index([isArchived])
 }
 
 model Payment {

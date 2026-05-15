@@ -37,9 +37,12 @@ The project is designed to run locally with a simple Node.js server that serves 
   - audible notification toggle + volume
 - **Manager dashboard** (`manager.html`):
   - stats (revenue totals by payment method, etc.)
+  - sales chart (`GET /api/analytics/sales`, orders with status New / InProgress / Done)
+  - product CRUD: create/edit modal, ingredients, soft-archive + restore, stop-list toggles
   - view orders and reservations
   - confirm/cancel reservations
   - audible notification toggle + volume
+  - cross-links to menu/staff open in a new tab
 - **My orders** (`my-orders.html`): logged-in customers see their orders and can request cancellation (pending review / auto-approve after 15 minutes).
 - **Cancellations queue** (`cancellations.html`): managers review cancellation requests, approve (YooKassa refund when applicable) or reject.
 - **Auth overlay** on the menu page:

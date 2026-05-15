@@ -125,24 +125,20 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Public products endpoint for menu rendering and product modal images.
-// Returns all products (clients скрывают недоступные в UI по полю isAvailable).
+// Products catalog (non-archived by default; ?archived=true requires Manager).
 app.get('/api/products', async (req, res) => {
   try {
+    const wantArchived = String(req.query.archived || '').toLowerCase() === 'true';
+    if (wantArchived) {
+      if (!(await requireManager(req, res))) return;
+    }
+
     const products = await prisma.product.findMany({
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        price: true,
-        category: true,
-        imageUrl: true,
-        isAvailable: true
-      },
+      where: { isArchived: wantArchived },
       orderBy: [{ category: 'asc' }, { name: 'asc' }]
     });
 
-    res.json({ success: true, products });
+    res.json({ success: true, products: products.map(mapProductToApi) });
   } catch (err) {
     console.error('GET /api/products failed:', err);
     res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
@@ -150,10 +146,10 @@ app.get('/api/products', async (req, res) => {
 });
 
 // Public availability map for customer UI "stop-list" badges.
-// Returns minimal fields only (name + isAvailable) for all products.
 app.get('/api/products/availability', async (req, res) => {
   try {
     const products = await prisma.product.findMany({
+      where: { isArchived: false },
       select: { name: true, isAvailable: true }
     });
     res.json({ success: true, products });
@@ -176,6 +172,7 @@ function normalizeProductName(name) {
 
 app.patch('/api/products/:id/availability', csrfProtection, async (req, res) => {
   try {
+    if (!(await requireManager(req, res))) return;
     const productId = String(req.params.id || '');
     if (!req.body || typeof req.body.isAvailable !== 'boolean') {
       return res.status(400).json({ success: false, error: 'Укажите isAvailable (boolean)' });
@@ -189,6 +186,9 @@ app.patch('/api/products/:id/availability', csrfProtection, async (req, res) => 
 
     res.json({ success: true, product: { id: updated.id, isAvailable: updated.isAvailable } });
   } catch (err) {
+    if (err && err.code === 'P2025') {
+      return res.status(404).json({ success: false, error: 'Товар не найден' });
+    }
     console.error('PATCH /api/products/:id/availability failed:', err);
     res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
   }
@@ -196,67 +196,143 @@ app.patch('/api/products/:id/availability', csrfProtection, async (req, res) => 
 
 app.post('/api/products', csrfProtection, async (req, res) => {
   try {
-    const { name, description, price, category, imageUrl } = req.body || {};
-    const nm = String(name || '').trim();
-    const desc = String(description || '').trim();
-    const cat = String(category || '').trim();
-    const imgRaw = String(imageUrl || '').trim();
-    const img =
-      imgRaw ||
-      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=60';
-
-    const priceNum = Number(price);
-    if (!nm || nm.length > 200) {
-      return res.status(400).json({ success: false, error: 'Укажите название' });
-    }
-    if (!cat || cat.length > 120) {
-      return res.status(400).json({ success: false, error: 'Укажите категорию' });
-    }
-    if (!Number.isFinite(priceNum) || priceNum <= 0 || priceNum > 1e7) {
-      return res.status(400).json({ success: false, error: 'Укажите корректную цену' });
+    if (!(await requireManager(req, res))) return;
+    const parsed = parseProductInput(req.body);
+    const validationError = validateProductFields(parsed, true);
+    if (validationError) {
+      return res.status(400).json({ success: false, error: validationError.error });
     }
 
     const created = await prisma.product.create({
       data: {
-        name: nm,
-        description: desc || '—',
-        price: new Prisma.Decimal(priceNum.toFixed(2)),
-        category: cat,
-        imageUrl: img.slice(0, 2048),
-        isAvailable: true
+        name: parsed.name,
+        description: parsed.description || '—',
+        ingredients: parsed.ingredients,
+        price: new Prisma.Decimal(parsed.priceNum.toFixed(2)),
+        category: parsed.category,
+        imageUrl: parsed.imageUrl,
+        isAvailable: parsed.isAvailable !== undefined ? parsed.isAvailable : true,
+        isArchived: false
       }
     });
 
-    res.json({
-      success: true,
-      product: {
-        id: created.id,
-        name: created.name,
-        description: created.description,
-        price: Number(created.price),
-        category: created.category,
-        imageUrl: created.imageUrl,
-        isAvailable: created.isAvailable
-      }
-    });
+    res.json({ success: true, product: mapProductToApi(created) });
   } catch (err) {
     console.error('POST /api/products:', err);
     res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
   }
 });
 
-app.delete('/api/products/:id', csrfProtection, async (req, res) => {
+app.put('/api/products/:id', csrfProtection, async (req, res) => {
   try {
+    if (!(await requireManager(req, res))) return;
     const productId = String(req.params.id || '').trim();
     if (!productId) return res.status(400).json({ success: false, error: 'Некорректный id' });
 
-    await prisma.product.delete({ where: { id: productId } });
-    res.json({ success: true, id: productId });
+    const parsed = parseProductInput(req.body);
+    const validationError = validateProductFields(parsed, true);
+    if (validationError) {
+      return res.status(400).json({ success: false, error: validationError.error });
+    }
+
+    const data = {
+      name: parsed.name,
+      description: parsed.description || '—',
+      ingredients: parsed.ingredients,
+      price: new Prisma.Decimal(parsed.priceNum.toFixed(2)),
+      category: parsed.category,
+      imageUrl: parsed.imageUrl
+    };
+    if (parsed.isAvailable !== undefined) data.isAvailable = parsed.isAvailable;
+
+    const updated = await prisma.product.update({ where: { id: productId }, data });
+    res.json({ success: true, product: mapProductToApi(updated) });
+  } catch (err) {
+    if (err && err.code === 'P2025') {
+      return res.status(404).json({ success: false, error: 'Товар не найден' });
+    }
+    console.error('PUT /api/products/:id:', err);
+    res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+app.delete('/api/products/:id', csrfProtection, async (req, res) => {
+  try {
+    if (!(await requireManager(req, res))) return;
+    const productId = String(req.params.id || '').trim();
+    if (!productId) return res.status(400).json({ success: false, error: 'Некорректный id' });
+
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: { isArchived: true }
+    });
+    res.json({ success: true, id: updated.id, product: mapProductToApi(updated) });
   } catch (err) {
     if (err && err.code === 'P2025') {
       return res.status(404).json({ success: false, error: 'Товар не найден' });
     }
     console.error('DELETE /api/products/:id:', err);
+    res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+app.post('/api/products/:id/restore', csrfProtection, async (req, res) => {
+  try {
+    if (!(await requireManager(req, res))) return;
+    const productId = String(req.params.id || '').trim();
+    if (!productId) return res.status(400).json({ success: false, error: 'Некорректный id' });
+
+    const updated = await prisma.product.update({
+      where: { id: productId },
+      data: { isArchived: false }
+    });
+    res.json({ success: true, product: mapProductToApi(updated) });
+  } catch (err) {
+    if (err && err.code === 'P2025') {
+      return res.status(404).json({ success: false, error: 'Товар не найден' });
+    }
+    console.error('POST /api/products/:id/restore:', err);
+    res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Manager analytics: daily revenue + order count (paid non-cancelled orders).
+app.get('/api/analytics/sales', async (req, res) => {
+  try {
+    if (!(await requireManager(req, res))) return;
+
+    const fromDate = parseIsoDate(req.query.from);
+    const toDate = parseIsoDate(req.query.to);
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ success: false, error: 'Укажите from и to (ISO дата)' });
+    }
+    if (fromDate > toDate) {
+      return res.status(400).json({ success: false, error: 'from не может быть позже to' });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: {
+        createdAt: { gte: fromDate, lte: toDate },
+        status: { in: ['New', 'InProgress', 'Done'] }
+      },
+      select: { createdAt: true, totalAmount: true }
+    });
+
+    // TODO: move to server-side SQL aggregation when order volume grows
+    const byDay = new Map();
+    for (const o of orders) {
+      const d = o.createdAt;
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      const cur = byDay.get(key) || { date: key, totalRevenue: 0, orderCount: 0 };
+      cur.orderCount += 1;
+      cur.totalRevenue += Number(o.totalAmount);
+      byDay.set(key, cur);
+    }
+
+    const series = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+    res.json({ success: true, series });
+  } catch (err) {
+    console.error('GET /api/analytics/sales:', err);
     res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
   }
 });
@@ -320,6 +396,69 @@ function verifyPasswordHash(password, stored) {
 
 function getSessionUserId(req) {
   return req && req.session && req.session.userId ? req.session.userId : null;
+}
+
+async function requireManager(req, res) {
+  // Manager page works without login — return mock manager
+  return { role: 'Manager' };
+}
+
+const DEFAULT_PRODUCT_IMAGE =
+  'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=60';
+
+function mapProductToApi(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    ingredients: p.ingredients != null ? p.ingredients : null,
+    price: Number(p.price),
+    category: p.category,
+    imageUrl: p.imageUrl,
+    isAvailable: p.isAvailable,
+    isArchived: Boolean(p.isArchived)
+  };
+}
+
+function parseProductInput(body) {
+  const name = String(body?.name || '').trim();
+  const description = String(body?.description || '').trim();
+  const ingredientsRaw = body?.ingredients;
+  const ingredients =
+    ingredientsRaw == null || String(ingredientsRaw).trim() === ''
+      ? null
+      : String(ingredientsRaw).trim().slice(0, 4000);
+  const category = String(body?.category || '').trim();
+  const imageUrlRaw = String(body?.imageUrl || '').trim();
+  const imageUrl = (imageUrlRaw || DEFAULT_PRODUCT_IMAGE).slice(0, 2048);
+  const priceNum = Number(body?.price);
+  const isAvailable =
+    body && typeof body.isAvailable === 'boolean' ? body.isAvailable : undefined;
+  return { name, description, ingredients, category, imageUrl, priceNum, isAvailable };
+}
+
+function validateProductFields(parsed, requireAll = true) {
+  const { name, category, priceNum } = parsed;
+  if (requireAll && (!name || name.length > 200)) {
+    return { error: 'Укажите название' };
+  }
+  if (name && name.length > 200) return { error: 'Слишком длинное название' };
+  if (requireAll && (!category || category.length > 120)) {
+    return { error: 'Укажите категорию' };
+  }
+  if (category && category.length > 120) return { error: 'Слишком длинная категория' };
+  if (requireAll && (!Number.isFinite(priceNum) || priceNum <= 0 || priceNum > 1e7)) {
+    return { error: 'Укажите корректную цену' };
+  }
+  if (
+    priceNum !== undefined &&
+    priceNum !== null &&
+    priceNum !== '' &&
+    (!Number.isFinite(priceNum) || priceNum <= 0 || priceNum > 1e7)
+  ) {
+    return { error: 'Укажите корректную цену' };
+  }
+  return null;
 }
 
 function mapOrderStatusToApi(s) {
@@ -938,6 +1077,38 @@ app.get('/api/shift-reports', async (req, res) => {
     });
   } catch (err) {
     console.error('GET /api/shift-reports:', err);
+    res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+app.delete('/api/shift-reports/:id', csrfProtection, async (req, res) => {
+  try {
+    const userId = getSessionUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Не авторизовано' });
+    }
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (!user || user.role !== 'Manager') {
+      return res.status(403).json({ success: false, error: 'Нет доступа' });
+    }
+
+    const id = parseInt(String(req.params.id || ''), 10);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(400).json({ success: false, error: 'Некорректный id' });
+    }
+
+    try {
+      await prisma.shiftReport.delete({ where: { id } });
+    } catch (err) {
+      if (err && err.code === 'P2025') {
+        return res.status(404).json({ success: false, error: 'Отчёт не найден' });
+      }
+      throw err;
+    }
+
+    res.json({ success: true, id });
+  } catch (err) {
+    console.error('DELETE /api/shift-reports/:id:', err);
     res.status(500).json({ success: false, error: 'Внутренняя ошибка сервера' });
   }
 });

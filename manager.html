@@ -59,39 +59,43 @@
     .manager-refresh:hover { background: var(--primary-dark); }
     .manager-auto { font-size: .85rem; color: var(--muted); margin-top: 4px; }
     .sound-controls {
+      position: relative;
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 0;
       flex-wrap: wrap;
     }
     .sound-btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
+      justify-content: center;
+      min-width: 42px;
+      height: 40px;
+      padding: 0 10px;
       background: #111;
       color: #fff;
       border: none;
       border-radius: var(--radius-pill);
       cursor: pointer;
-      font-size: .95rem;
+      font-size: 1.1rem;
       transition: var(--transition);
     }
     .sound-btn.sound-on { background: #2e7d32; }
     .sound-btn:hover { filter: brightness(1.05); }
-    .sound-vol {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: .9rem;
-      color: var(--text-color);
+    .sound-vol-popover {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      padding: 10px 12px;
       background: var(--light);
       border: 1px solid var(--border);
-      padding: 8px 12px;
-      border-radius: var(--radius-pill);
-      box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      z-index: 80;
+      min-width: 160px;
     }
-    .sound-vol input[type="range"] { width: 120px; }
+    .sound-vol-popover-label { display: block; font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
+    .sound-vol-popover input[type="range"] { width: 100%; }
     
     .stats-grid {
       display: grid;
@@ -259,22 +263,43 @@
     .shift-reports-wrap {
       background: var(--light);
       border-radius: var(--radius-lg);
-      padding: 20px;
+      padding: 12px 14px;
       box-shadow: var(--shadow-md);
-      margin-bottom: 24px;
+      margin-bottom: 18px;
     }
     .shift-reports-wrap h2 {
-      margin: 0 0 14px;
+      margin: 0 0 8px;
       color: var(--dark);
-      font-size: 1.15rem;
+      font-size: 1rem;
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
+      flex-wrap: wrap;
+    }
+    .shift-reports-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+    .shift-reports-toolbar input[type="date"] {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font: inherit;
+      background: var(--section-bg, var(--light));
+      color: var(--text-color);
     }
     .shift-reports-table-wrap { overflow-x: auto; }
-    table.shift-reports-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-    .shift-reports-table th, .shift-reports-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; color: var(--text-color); }
+    table.shift-reports-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .shift-reports-table th, .shift-reports-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; color: var(--text-color); }
     .shift-reports-table th { background: var(--tbl-head); font-weight: 600; }
+    .shift-reports-table .col-del { width: 1%; white-space: nowrap; text-align: right; }
+    .btn-shift-del { padding: 4px 8px; font-size: .75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--light); color: var(--text-color); cursor: pointer; }
+    .btn-shift-del:hover { background: #ffebee; border-color: #e57373; color: #b71c1c; }
     .manager-products h2.manager-settings-title { margin: 18px 0 12px; color: var(--text-color); }
     .manager-products .manager-hint { color: var(--muted); font-size: .9rem; margin-bottom: 10px; }
     .mgr-stop-card {
@@ -288,7 +313,132 @@
       gap: 10px;
     }
     .mgr-stop-card .muted { font-size: .85rem; color: var(--muted); margin-top: 4px; }
-    .mgr-p-name { font-weight: 700; color: var(--text-color); }
+    .manager-product-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-color);
+    }
+    .mgr-products-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .mgr-btn-add-product {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: .95rem;
+      cursor: pointer;
+      transition: transform 0.1s, filter 0.15s;
+    }
+    .mgr-btn-add-product:hover { filter: brightness(1.15); }
+    .mgr-btn-add-product:active { transform: scale(0.98); }
+    .mgr-cat-row { display: flex; gap: 8px; align-items: stretch; }
+    .mgr-cat-row select { flex: 1; }
+    .mgr-btn-add-cat {
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--light);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+    .mgr-btn-edit, .mgr-btn-archive, .mgr-btn-restore {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--light);
+      cursor: pointer;
+      font-size: .78rem;
+      font-weight: 600;
+      margin-left: 4px;
+    }
+    .mgr-btn-edit:hover { background: #e3f2fd; border-color: #64b5f6; }
+    .mgr-btn-archive:hover { background: #fff3e0; border-color: #ffb74d; }
+    .mgr-btn-restore:hover { background: #e8f5e9; border-color: #81c784; }
+    .product-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0,0,0,.45);
+    }
+    .product-modal-overlay[hidden] { display: none !important; }
+    .product-modal-card {
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--light);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+    }
+    .product-modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      border: none;
+      background: transparent;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--muted);
+      line-height: 1;
+    }
+    .product-modal-card h3 { margin: 0 0 16px; font-size: 1.15rem; }
+    .product-modal-card label { display: block; font-weight: 600; margin-bottom: 14px; font-size: .9rem; }
+    .product-modal-card input,
+    .product-modal-card textarea,
+    .product-modal-card select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-sizing: border-box;
+      font: inherit;
+      background: var(--section-bg, var(--light));
+      color: var(--text-color);
+    }
+    .sales-chart-wrap {
+      background: var(--light);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 18px;
+    }
+    .sales-chart-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: .88rem;
+    }
+    .sales-chart-toolbar select {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font: inherit;
+    }
+    #salesChart { max-height: 280px; width: 100% !important; }
     .mgr-p-sub { margin-top: 6px; font-size: .9rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
     .mgr-add-product-details { margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--light); }
     .mgr-add-product-details > summary.mgr-add-summary {
@@ -389,9 +539,9 @@
 <body>
   <div class="manager-page">
     <nav class="brodsky-app-nav" aria-label="Разделы приложения">
-      <a href="index.html"><i class="fas fa-utensils"></i> Меню</a>
-      <a href="staff-orders.html"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
-      <a href="cancellations.html"><i class="fas fa-undo-alt"></i> Отмены</a>
+      <a href="index.html" target="_blank" rel="noopener noreferrer"><i class="fas fa-utensils"></i> Меню</a>
+      <a href="staff-orders.html" target="_blank" rel="noopener noreferrer"><i class="fas fa-clipboard-list"></i> Заказы персонала</a>
+      <a href="cancellations.html" target="_blank" rel="noopener noreferrer"><i class="fas fa-undo-alt"></i> Отмены</a>
     </nav>
     <div class="manager-header">
       <div>
@@ -400,12 +550,12 @@
       </div>
       <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
         <div class="sound-controls">
-          <button type="button" class="sound-btn" id="btnSound" aria-label="Звуковые уведомления">
-            <i class="fas fa-volume-high"></i> Звук: выкл
+          <button type="button" class="sound-btn" id="btnSound" aria-label="Звук уведомлений" title="Клик — вкл/выкл. Двойной клик — громкость.">
+            <i class="fas fa-volume-xmark" id="btnSoundIcon"></i>
           </button>
-          <div class="sound-vol" aria-label="Громкость уведомлений">
-            <span>Громкость</span>
-            <input id="soundVolume" type="range" min="0" max="1" step="0.05" value="0.85">
+          <div id="soundVolPopover" class="sound-vol-popover" hidden>
+            <span class="sound-vol-popover-label">Громкость</span>
+            <input id="soundVolume" type="range" min="0" max="1" step="0.05" value="0.85" aria-label="Громкость уведомлений">
           </div>
         </div>
         <button type="button" class="manager-refresh" id="btnRefresh" aria-label="Обновить">
@@ -418,27 +568,33 @@
     
     <div class="stats-grid" id="statsGrid"></div>
 
+    <details class="sales-chart-wrap" id="salesChartSection">
+      <summary style="cursor:pointer;font-weight:600;list-style:none;"><i class="fas fa-chart-line"></i> Продажи</summary>
+      <div style="margin-top:12px;">
+        <div class="sales-chart-toolbar">
+          <label for="salesChartRange">Период:</label>
+          <select id="salesChartRange" aria-label="Период графика">
+            <option value="7">7 дней</option>
+            <option value="30" selected>30 дней</option>
+            <option value="month">Этот месяц</option>
+          </select>
+        </div>
+        <canvas id="salesChart" aria-label="График продаж"></canvas>
+      </div>
+    </details>
+
     <section class="manager-products" id="menuManageSection" aria-labelledby="menuManageHeading">
       <h2 id="menuManageHeading" class="manager-settings-title"><i class="fas fa-utensils"></i> Управление меню</h2>
-      <p class="manager-hint">Добавление позиций, стоп-лист и удаление (защита CSRF).</p>
+      <p class="manager-hint"></p>
 
-      <details class="mgr-add-product-details">
-        <summary class="mgr-add-summary"><i class="fas fa-plus-circle"></i> Добавить позицию</summary>
-        <div class="mgr-add-inner">
-          <div class="mgr-stop-card" style="display:block;border:none;">
-            <div style="display:grid;gap:10px;">
-              <label style="font-weight:600;color:var(--text-color);">Название<br><input id="pmName" type="text" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
-              <label style="font-weight:600;color:var(--text-color);">Описание<br><textarea id="pmDesc" rows="2" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;font:inherit;"></textarea></label>
-              <label style="font-weight:600;color:var(--text-color);">Цена (₽)<br><input id="pmPrice" type="number" min="1" step="1" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
-              <label style="font-weight:600;color:var(--text-color);">Категория<br><input id="pmCat" type="text" placeholder="coffee" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
-              <label style="font-weight:600;color:var(--text-color);">URL изображения<br><input id="pmImg" type="url" placeholder="https://..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);box-sizing:border-box;background:var(--section-bg, var(--light));color:var(--text-color);margin-top:6px;"></label>
-            </div>
-            <button type="button" class="shift-btn" id="btnProductCreate" style="margin-top:14px;"><i class="fas fa-plus"></i> Добавить товар</button>
-            <span id="pmCreateSpinner" class="brodsky-spinner" style="display:none;margin-left:10px;vertical-align:middle" aria-hidden="true"></span>
-            <p id="pmFormError" class="manager-error" hidden style="margin-top:10px;"></p>
-          </div>
-        </div>
-      </details>
+      <div class="mgr-products-toolbar">
+        <button type="button" class="mgr-btn-add-product" id="btnOpenProductModal"><i class="fas fa-plus"></i> Добавить товар</button>
+      </div>
+
+      <div class="tabs mgr-product-tabs">
+        <button type="button" class="tab-btn active" data-product-tab="active">Активные</button>
+        <button type="button" class="tab-btn" data-product-tab="archived">Архив</button>
+      </div>
 
       <div class="mgr-menu-toolbar">
         <input type="search" id="mgrProductSearch" placeholder="Поиск по названию..." autocomplete="off" aria-label="Поиск по названию">
@@ -462,8 +618,16 @@
       </div>
     </section>
 
-    <div class="shift-reports-wrap" id="shiftReportsSection">
-      <h2><i class="fas fa-file-invoice"></i> Отчёты по сменам</h2>
+    <details class="shift-reports-wrap" id="shiftReportsSection">
+      <summary style="cursor:pointer;font-weight:600;color:var(--text-color);list-style:none;display:flex;align-items:center;gap:8px;">
+        <i class="fas fa-file-invoice"></i> Отчёты по сменам <span class="muted" style="font-weight:400;font-size:.82rem;">(развернуть)</span>
+      </summary>
+      <div style="margin-top:10px;">
+      <div class="shift-reports-toolbar">
+        <label for="shiftReportsDate">Дата отчёта:</label>
+        <input type="date" id="shiftReportsDate" name="shiftReportsDate" aria-label="Фильтр по дате создания отчёта">
+        <span class="muted">Пусто — все даты</span>
+      </div>
       <div id="shiftReportsTableWrap" class="shift-reports-table-wrap">
         <table class="shift-reports-table" aria-label="Отчёты по сменам">
           <thead>
@@ -473,6 +637,7 @@
               <th>Заказов</th>
               <th>Выручка</th>
               <th>Средний чек</th>
+              <th class="col-del"></th>
             </tr>
           </thead>
           <tbody id="shiftReportsBody"></tbody>
@@ -481,7 +646,8 @@
       <div id="shiftReportsEmpty" class="manager-empty" hidden>
         <p>Отчётов по сменам пока нет.</p>
       </div>
-    </div>
+      </div>
+    </details>
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="orders">Заказы и оплаты</button>
@@ -501,8 +667,32 @@
         <p>Пока нет бронирований.</p>
       </div>
     </div>
+    </div>
+
+  <div id="productModal" class="product-modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="productModalTitle">
+    <div class="product-modal-card">
+      <button type="button" class="product-modal-close" id="productModalClose" aria-label="Закрыть">&times;</button>
+      <h3 id="productModalTitle">Товар</h3>
+      <label>Название<input id="pmName" type="text" autocomplete="off"></label>
+      <label>Описание<textarea id="pmDesc" rows="2"></textarea></label>
+      <label>Состав<textarea id="pmIngredients" rows="2" placeholder="Необязательно"></textarea></label>
+      <label>Цена (₽)<input id="pmPrice" type="number" min="1" step="1"></label>
+      <label>Категория
+        <div class="mgr-cat-row">
+          <select id="pmCat"></select>
+          <button type="button" class="mgr-btn-add-cat" id="btnAddCategory" title="Добавить категорию">+</button>
+        </div>
+      </label>
+      <label>URL изображения<input id="pmImg" type="url" placeholder="https://..."></label>
+      <p id="pmFormError" class="manager-error" hidden></p>
+      <button type="button" class="mgr-btn-add-product" id="btnProductSave" style="width:100%;justify-content:center;margin-top:8px;">
+        <i class="fas fa-save"></i> <span id="btnProductSaveLabel">Сохранить</span>
+      </button>
+      <span id="pmCreateSpinner" class="brodsky-spinner" style="display:none;margin-left:10px;" aria-hidden="true"></span>
+    </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="toast.js"></script>
   <script src="pwa.js"></script>
   <script>
@@ -551,9 +741,14 @@
     const shiftReportsSection = document.getElementById('shiftReportsSection');
     const shiftReportsBody = document.getElementById('shiftReportsBody');
     const shiftReportsEmpty = document.getElementById('shiftReportsEmpty');
+    const shiftReportsDate = document.getElementById('shiftReportsDate');
+    let allShiftReports = [];
     const btnRefresh = document.getElementById('btnRefresh');
     const btnSound = document.getElementById('btnSound');
+    const btnSoundIcon = document.getElementById('btnSoundIcon');
     const soundVolume = document.getElementById('soundVolume');
+    const soundVolPopover = document.getElementById('soundVolPopover');
+    const BRODSKY_NOTIFY_VOLUME_KEY = 'brodsky_notify_volume';
 
     let currentTab = 'orders';
     let soundEnabled = false;
@@ -562,10 +757,23 @@
     const knownReservationIds = new Set();
     let initializedKnownIds = false;
 
+    try {
+      const savedVol = localStorage.getItem(BRODSKY_NOTIFY_VOLUME_KEY);
+      if (savedVol != null && soundVolume) soundVolume.value = savedVol;
+    } catch (_) {}
+
     function getVolume() {
       const v = parseFloat(soundVolume && soundVolume.value);
       if (Number.isFinite(v)) return Math.min(1, Math.max(0, v));
       return 0.85;
+    }
+
+    if (soundVolume) {
+      soundVolume.addEventListener('input', () => {
+        try {
+          localStorage.setItem(BRODSKY_NOTIFY_VOLUME_KEY, soundVolume.value);
+        } catch (_) {}
+      });
     }
 
     function ensureAudio() {
@@ -589,12 +797,12 @@
       master.connect(audioCtx.destination);
 
       const pattern = [
-        { t: 0.00, f: 880, d: 0.12 },
+        { t: 0.0, f: 880, d: 0.12 },
         { t: 0.18, f: 880, d: 0.12 },
         { t: 0.36, f: 988, d: 0.14 }
       ];
 
-      pattern.forEach(p => {
+      pattern.forEach((p) => {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.type = 'square';
@@ -612,13 +820,20 @@
     function updateSoundUi() {
       if (!btnSound) return;
       btnSound.classList.toggle('sound-on', soundEnabled);
-      btnSound.innerHTML = soundEnabled
-        ? '<i class="fas fa-volume-high"></i> Звук: вкл'
-        : '<i class="fas fa-volume-xmark"></i> Звук: выкл';
+      if (btnSoundIcon) {
+        btnSoundIcon.className = soundEnabled ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
+      }
+      btnSound.setAttribute('aria-label', soundEnabled ? 'Звук включён' : 'Звук выключен');
     }
 
     if (btnSound) {
-      btnSound.addEventListener('click', () => {
+      btnSound.addEventListener('click', (e) => {
+        if (soundVolPopover && soundVolPopover.contains(e.target)) return;
+        if (e.detail === 2) {
+          e.preventDefault();
+          if (soundVolPopover) soundVolPopover.hidden = !soundVolPopover.hidden;
+          return;
+        }
         soundEnabled = !soundEnabled;
         if (soundEnabled) ensureAudio();
         updateSoundUi();
@@ -626,6 +841,12 @@
       });
       updateSoundUi();
     }
+
+    document.addEventListener('click', (e) => {
+      if (!soundVolPopover || soundVolPopover.hidden) return;
+      if (e.target.closest('.sound-controls')) return;
+      soundVolPopover.hidden = true;
+    });
 
     // Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -681,7 +902,32 @@
     const mgrProductTableBody = document.getElementById('mgrProductTableBody');
     const mgrProductTableEmpty = document.getElementById('mgrProductTableEmpty');
     const mgrProductSearch = document.getElementById('mgrProductSearch');
+    const productModal = document.getElementById('productModal');
+    const btnOpenProductModal = document.getElementById('btnOpenProductModal');
+    const btnProductSave = document.getElementById('btnProductSave');
+    const productModalClose = document.getElementById('productModalClose');
+    const salesChartRange = document.getElementById('salesChartRange');
+    const MGR_CUSTOM_CAT_KEY = 'brodsky_mgr_custom_categories';
+    const MGR_BUILTIN_CATEGORIES = [
+      { value: 'coffee', label: 'Кофе' },
+      { value: 'seasonal', label: 'Сезонные напитки' },
+      { value: 'tea', label: 'Чай' },
+      { value: 'cocoa', label: 'Какао' },
+      { value: 'fresh', label: 'Свежие соки' },
+      { value: 'meals-breakfasts', label: 'Завтраки до 14:00' },
+      { value: 'meals-curd', label: 'Творог и сырники' },
+      { value: 'meals-pancakes', label: 'Блины' },
+      { value: 'meals-toasts', label: 'Тосты и хлеб' },
+      { value: 'meals-salads', label: 'Салаты' },
+      { value: 'meals-pasta', label: 'Паста' },
+      { value: 'meals-pizza', label: 'Пицца' },
+      { value: 'meals-soups', label: 'Супы' },
+      { value: 'meals-desserts', label: 'Десерты' }
+    ];
     let cachedProducts = [];
+    let productTab = 'active';
+    let editingProductId = null;
+    let salesChartInstance = null;
 
     function getProductSearchQuery() {
       return ((mgrProductSearch && mgrProductSearch.value) || '').trim().toLowerCase();
@@ -705,13 +951,135 @@
       if (sp) sp.style.visibility = busy ? 'visible' : 'hidden';
     }
 
+    function getCustomCategories() {
+      try {
+        const raw = localStorage.getItem(MGR_CUSTOM_CAT_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.filter((x) => x && x.value && x.label) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveCustomCategories(list) {
+      localStorage.setItem(MGR_CUSTOM_CAT_KEY, JSON.stringify(list));
+    }
+
+    function getAllCategories() {
+      const seen = new Set();
+      const out = [];
+      for (const c of [...MGR_BUILTIN_CATEGORIES, ...getCustomCategories()]) {
+        if (seen.has(c.value)) continue;
+        seen.add(c.value);
+        out.push(c);
+      }
+      for (const p of cachedProducts) {
+        const v = String(p.category || '').trim();
+        if (!v || seen.has(v)) continue;
+        seen.add(v);
+        out.push({ value: v, label: v });
+      }
+      return out;
+    }
+
+    function populateCategorySelect(selected) {
+      const sel = document.getElementById('pmCat');
+      if (!sel) return;
+      const cur = selected || sel.value;
+      sel.innerHTML = '';
+      getAllCategories().forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c.value;
+        opt.textContent = c.label;
+        sel.appendChild(opt);
+      });
+      if (cur) sel.value = cur;
+    }
+
+    function openProductModal(product) {
+      editingProductId = product && product.id ? product.id : null;
+      const title = document.getElementById('productModalTitle');
+      const saveLabel = document.getElementById('btnProductSaveLabel');
+      if (title) title.textContent = editingProductId ? 'Редактировать товар' : 'Новый товар';
+      if (saveLabel) saveLabel.textContent = editingProductId ? 'Сохранить' : 'Добавить';
+      populateCategorySelect(product && product.category);
+      const nm = document.getElementById('pmName');
+      const dc = document.getElementById('pmDesc');
+      const ing = document.getElementById('pmIngredients');
+      const pr = document.getElementById('pmPrice');
+      const im = document.getElementById('pmImg');
+      const errEl = document.getElementById('pmFormError');
+      if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
+      if (nm) nm.value = product ? String(product.name || '') : '';
+      if (dc) dc.value = product ? String(product.description || '') : '';
+      if (ing) ing.value = product && product.ingredients ? String(product.ingredients) : '';
+      if (pr) pr.value = product ? String(Number(product.price) || '') : '';
+      if (im) im.value = product ? String(product.imageUrl || '') : '';
+      if (productModal) productModal.hidden = false;
+    }
+
+    function closeProductModal() {
+      editingProductId = null;
+      if (productModal) productModal.hidden = true;
+    }
+
+    function productFormBody() {
+      return {
+        name: (document.getElementById('pmName') && document.getElementById('pmName').value) || '',
+        description: (document.getElementById('pmDesc') && document.getElementById('pmDesc').value) || '',
+        ingredients: (document.getElementById('pmIngredients') && document.getElementById('pmIngredients').value) || '',
+        price: (document.getElementById('pmPrice') && document.getElementById('pmPrice').value) || '',
+        category: (document.getElementById('pmCat') && document.getElementById('pmCat').value) || '',
+        imageUrl: (document.getElementById('pmImg') && document.getElementById('pmImg').value) || ''
+      };
+    }
+
+    async function saveProduct() {
+      const errEl = document.getElementById('pmFormError');
+      const spin = document.getElementById('pmCreateSpinner');
+      if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
+      if (spin) spin.style.display = '';
+      if (btnProductSave) btnProductSave.disabled = true;
+      try {
+        const body = productFormBody();
+        const url = editingProductId
+          ? API_BASE + '/api/products/' + encodeURIComponent(editingProductId)
+          : API_BASE + '/api/products';
+        const method = editingProductId ? 'PUT' : 'POST';
+        const res = await fetchWithCsrfRetry((token) =>
+          fetch(url, {
+            method,
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+            body: JSON.stringify(body)
+          })
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось сохранить');
+        if (typeof showToast === 'function') {
+          showToast(editingProductId ? 'Товар обновлён' : 'Товар добавлен', 'success');
+        }
+        closeProductModal();
+        await loadProductsAvailability();
+      } catch (e) {
+        if (errEl) {
+          errEl.textContent = e.message || 'Ошибка';
+          errEl.hidden = false;
+        }
+      } finally {
+        if (spin) spin.style.display = 'none';
+        if (btnProductSave) btnProductSave.disabled = false;
+      }
+    }
+
     function renderProductTable() {
       if (!mgrProductTableBody || !mgrProductTableEmpty) return;
       const products = productsMatchingSearch();
+      const isArchived = productTab === 'archived';
       mgrProductTableBody.innerHTML = '';
       if (!cachedProducts.length) {
         mgrProductTableEmpty.hidden = false;
-        mgrProductTableEmpty.querySelector('p').textContent = 'Товары не найдены.';
+        mgrProductTableEmpty.querySelector('p').textContent = isArchived ? 'Архив пуст.' : 'Товары не найдены.';
         return;
       }
       if (!products.length) {
@@ -729,19 +1097,14 @@
           '<td><div class="mgr-p-name">' + escapeHtml(p.name) + '</div>'
           + '<div class="muted" style="font-size:.8rem;margin-top:4px;">' + escapeHtml(p.category || '') + '</div></td>'
           + '<td class="col-price">' + escapeHtml(String(Number(p.price))) + ' ₽</td>'
-          + '<td>'
-          + '<label class="mgr-avail-switch">'
-          + '<input type="checkbox" class="mgr-avail-toggle"' + (avail ? ' checked' : '') + '>'
-          + '<span class="mgr-avail-caption">' + (avail ? 'В наличии' : 'Нет') + '</span>'
-          + '<span data-spinner style="visibility:hidden" class="brodsky-spinner" aria-hidden="true"></span>'
-          + '</label>'
-          + '</td>'
-          + '<td class="col-actions"><button type="button" class="mgr-btn-delete btn-del-product"><i class="fas fa-trash"></i> Удалить</button></td>';
+          + (isArchived
+            ? '<td><span class="muted">В архиве</span></td><td class="col-actions"><button type="button" class="mgr-btn-restore btn-restore-product"><i class="fas fa-undo"></i> Восстановить</button></td>'
+            : '<td><label class="mgr-avail-switch"><input type="checkbox" class="mgr-avail-toggle"' + (avail ? ' checked' : '') + '><span class="mgr-avail-caption">' + (avail ? 'В наличии' : 'Нет') + '</span><span data-spinner style="visibility:hidden" class="brodsky-spinner" aria-hidden="true"></span></label></td><td class="col-actions"><button type="button" class="mgr-btn-edit btn-edit-product" title="Редактировать"><i class="fas fa-pen"></i></button><button type="button" class="mgr-btn-archive btn-del-product"><i class="fas fa-archive"></i> В архив</button></td>');
 
         const toggle = tr.querySelector('.mgr-avail-toggle');
-        toggle.setAttribute('aria-label', 'Наличие: ' + String(p.name || ''));
+        if (toggle) toggle.setAttribute('aria-label', 'Наличие: ' + String(p.name || ''));
 
-        toggle.addEventListener('change', async () => {
+        if (toggle) toggle.addEventListener('change', async () => {
           const next = Boolean(toggle.checked);
           setProductRowBusy(tr, true);
           try {
@@ -758,14 +1121,19 @@
           }
         });
 
-        tr.querySelector('.btn-del-product').addEventListener('click', () => deleteProduct(pid));
+        const delBtn = tr.querySelector('.btn-del-product');
+        if (delBtn) delBtn.addEventListener('click', () => archiveProduct(pid));
+        const editBtn = tr.querySelector('.btn-edit-product');
+        if (editBtn) editBtn.addEventListener('click', () => openProductModal(p));
+        const restoreBtn = tr.querySelector('.btn-restore-product');
+        if (restoreBtn) restoreBtn.addEventListener('click', () => restoreProduct(pid));
 
         mgrProductTableBody.appendChild(tr);
       });
     }
 
-    async function deleteProduct(productId) {
-      if (!productId || !confirm('Удалить товар из базы? Это действие необратимо.')) return;
+    async function archiveProduct(productId) {
+      if (!productId || !confirm('Переместить товар в архив?')) return;
       try {
         const res = await fetchWithCsrfRetry((token) =>
           fetch(API_BASE + '/api/products/' + encodeURIComponent(productId), {
@@ -775,8 +1143,27 @@
           })
         );
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось удалить');
-        if (typeof showToast === 'function') showToast('Продукт удалён', 'success');
+        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось архивировать');
+        if (typeof showToast === 'function') showToast('Товар в архиве', 'success');
+        await loadProductsAvailability();
+      } catch (e) {
+        if (typeof showToast === 'function') showToast(e.message || 'Ошибка', 'error');
+      }
+    }
+
+    async function restoreProduct(productId) {
+      if (!productId) return;
+      try {
+        const res = await fetchWithCsrfRetry((token) =>
+          fetch(API_BASE + '/api/products/' + encodeURIComponent(productId) + '/restore', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'X-CSRF-Token': token }
+          })
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось восстановить');
+        if (typeof showToast === 'function') showToast('Товар восстановлен', 'success');
         await loadProductsAvailability();
       } catch (e) {
         if (typeof showToast === 'function') showToast(e.message || 'Ошибка', 'error');
@@ -806,7 +1193,8 @@
       if (mgrProductTableEmpty) mgrProductTableEmpty.hidden = true;
 
       try {
-        const res = await fetch(API_BASE + '/api/products', { credentials: 'include', cache: 'no-store' });
+        const archivedQ = productTab === 'archived' ? '?archived=true' : '';
+        const res = await fetch(API_BASE + '/api/products' + archivedQ, { credentials: 'include', cache: 'no-store' });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось загрузить товары');
         cachedProducts = data.products || [];
@@ -822,6 +1210,129 @@
       mgrProductSearch.addEventListener('input', () => renderProductTable());
     }
 
+    document.querySelectorAll('[data-product-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-product-tab');
+        if (!tab || tab === productTab) return;
+        productTab = tab;
+        document.querySelectorAll('[data-product-tab]').forEach((b) => {
+          b.classList.toggle('active', b.getAttribute('data-product-tab') === tab);
+        });
+        loadProductsAvailability();
+      });
+    });
+
+    if (btnOpenProductModal) {
+      btnOpenProductModal.addEventListener('click', () => openProductModal(null));
+    }
+    if (btnProductSave) {
+      btnProductSave.addEventListener('click', () => saveProduct());
+    }
+    if (productModalClose) {
+      productModalClose.addEventListener('click', closeProductModal);
+    }
+    if (productModal) {
+      productModal.addEventListener('click', (e) => {
+        if (e.target === productModal) closeProductModal();
+      });
+    }
+    const btnAddCategory = document.getElementById('btnAddCategory');
+    if (btnAddCategory) {
+      btnAddCategory.addEventListener('click', () => {
+        const label = prompt('Название новой категории (латиница для slug):');
+        if (!label || !String(label).trim()) return;
+        const slug = String(label).trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 80);
+        if (!slug) {
+          if (typeof showToast === 'function') showToast('Некорректный slug категории', 'error');
+          return;
+        }
+        const list = getCustomCategories();
+        if (!list.some((c) => c.value === slug)) {
+          list.push({ value: slug, label: String(label).trim() });
+          saveCustomCategories(list);
+        }
+        populateCategorySelect(slug);
+      });
+    }
+
+    function salesChartDateRange() {
+      const mode = salesChartRange ? salesChartRange.value : '30';
+      const to = new Date();
+      to.setUTCHours(23, 59, 59, 999);
+      const from = new Date(to);
+      if (mode === 'month') {
+        from.setUTCDate(1);
+        from.setUTCHours(0, 0, 0, 0);
+      } else {
+        const days = mode === '7' ? 7 : 30;
+        from.setUTCDate(from.getUTCDate() - (days - 1));
+        from.setUTCHours(0, 0, 0, 0);
+      }
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+
+    async function loadSalesChart() {
+      const canvas = document.getElementById('salesChart');
+      if (!canvas || typeof Chart === 'undefined') return;
+      try {
+        const range = salesChartDateRange();
+        const url = API_BASE + '/api/analytics/sales?from=' + encodeURIComponent(range.from) + '&to=' + encodeURIComponent(range.to);
+        const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось загрузить аналитику');
+        const series = data.series || [];
+        const labels = series.map((d) => d.date);
+        const revenue = series.map((d) => Math.round(Number(d.totalRevenue) || 0));
+        const counts = series.map((d) => Number(d.orderCount) || 0);
+        if (salesChartInstance) {
+          salesChartInstance.destroy();
+          salesChartInstance = null;
+        }
+        salesChartInstance = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Выручка (₽)',
+                data: revenue,
+                backgroundColor: 'rgba(255, 119, 0, 0.65)',
+                yAxisID: 'y'
+              },
+              {
+                label: 'Заказов',
+                data: counts,
+                type: 'line',
+                borderColor: '#1976d2',
+                backgroundColor: 'rgba(25, 118, 210, 0.15)',
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { beginAtZero: true, position: 'left', title: { display: true, text: '₽' } },
+              y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'шт.' } }
+            }
+          }
+        });
+      } catch (e) {
+        if (typeof showToast === 'function') showToast(e.message || 'График недоступен', 'error');
+      }
+    }
+
+    if (salesChartRange) {
+      salesChartRange.addEventListener('change', () => loadSalesChart());
+    }
+    const salesChartSection = document.getElementById('salesChartSection');
+    if (salesChartSection) {
+      salesChartSection.addEventListener('toggle', () => {
+        if (salesChartSection.open) loadSalesChart();
+      });
+    }
+
     function formatRub(n) {
       const x = typeof n === 'number' ? n : parseFloat(String(n));
       if (!Number.isFinite(x)) return '0 ₽';
@@ -831,17 +1342,34 @@
       return intSpaced + ',' + parts[1] + ' ₽';
     }
 
+    function localDateKeyFromCreatedAt(iso) {
+      const dt = new Date(iso);
+      if (!Number.isFinite(dt.getTime())) return '';
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+
+    function applyShiftReportsDateFilter() {
+      // TODO: move to server-side ?date= filter when report volume grows
+      const d = shiftReportsDate && shiftReportsDate.value;
+      let rows = (allShiftReports || []).slice();
+      if (d) {
+        rows = rows.filter((r) => localDateKeyFromCreatedAt(r.createdAt) === d);
+      }
+      renderShiftReports(rows);
+    }
+
     function renderShiftReports(reports) {
       if (!shiftReportsSection) return;
       const tableWrap = document.getElementById('shiftReportsTableWrap');
       shiftReportsBody.innerHTML = '';
       if (!reports || reports.length === 0) {
-        shiftReportsSection.hidden = false;
         if (tableWrap) tableWrap.hidden = true;
         shiftReportsEmpty.hidden = false;
         return;
       }
-      shiftReportsSection.hidden = false;
       if (tableWrap) tableWrap.hidden = false;
       shiftReportsEmpty.hidden = true;
 
@@ -857,9 +1385,31 @@
           + '<td>' + escapeHtml(dateLabel) + '</td>'
           + '<td>' + Number(r.orderCount || 0) + '</td>'
           + '<td>' + escapeHtml(formatRub(r.totalRevenue)) + '</td>'
-          + '<td>' + escapeHtml(formatRub(r.averageOrder)) + '</td>';
+          + '<td>' + escapeHtml(formatRub(r.averageOrder)) + '</td>'
+          + '<td class="col-del"><button type="button" class="btn-shift-del" data-report-id="' + Number(r.id) + '">Удалить</button></td>';
+        const delBtn = tr.querySelector('.btn-shift-del');
+        if (delBtn) delBtn.addEventListener('click', () => deleteShiftReport(Number(r.id)));
         shiftReportsBody.appendChild(tr);
       });
+    }
+
+    async function deleteShiftReport(reportId) {
+      if (!reportId || !confirm('Удалить отчёт по смене? Это действие необратимо.')) return;
+      try {
+        const res = await fetchWithCsrfRetry((token) =>
+          fetch(API_BASE + '/api/shift-reports/' + encodeURIComponent(reportId), {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'X-CSRF-Token': token }
+          })
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось удалить');
+        if (typeof showToast === 'function') showToast('Отчёт удалён', 'success');
+        await loadShiftReports();
+      } catch (e) {
+        if (typeof showToast === 'function') showToast(e.message || 'Ошибка', 'error');
+      }
     }
 
     async function loadShiftReports() {
@@ -867,13 +1417,20 @@
         const rRes = await fetch(API_BASE + '/api/shift-reports', { cache: 'no-store' });
         const rData = await rRes.json().catch(() => ({}));
         if (rRes.ok && rData && rData.success) {
-          renderShiftReports(rData.reports || []);
+          allShiftReports = rData.reports || [];
         } else {
-          renderShiftReports([]);
+          allShiftReports = [];
         }
+        applyShiftReportsDateFilter();
       } catch (_) {
-        renderShiftReports([]);
+        allShiftReports = [];
+        applyShiftReportsDateFilter();
       }
+    }
+
+    if (shiftReportsDate) {
+      shiftReportsDate.addEventListener('change', () => applyShiftReportsDateFilter());
+      shiftReportsDate.addEventListener('input', () => applyShiftReportsDateFilter());
     }
 
     function renderStats(ordersList, reservationsList) {
@@ -1048,8 +1605,9 @@
         renderOrders(ordersList);
         renderReservations(reservationsList);
 
-        // Stop-list UI: toggles product availability.
         await loadProductsAvailability();
+        const chartSec = document.getElementById('salesChartSection');
+        if (chartSec && chartSec.open) loadSalesChart();
       } catch (e) {
         showError('Не удалось загрузить данные. Убедитесь, что сервер запущен (npm start в папке server). ' + e.message);
         renderStats([], []);
@@ -1060,58 +1618,7 @@
       }
     }
 
-    const btnProductCreate = document.getElementById('btnProductCreate');
-    if (btnProductCreate) {
-      btnProductCreate.addEventListener('click', async () => {
-        const errEl = document.getElementById('pmFormError');
-        const spin = document.getElementById('pmCreateSpinner');
-        if (errEl) {
-          errEl.hidden = true;
-          errEl.textContent = '';
-        }
-        if (spin) spin.style.display = '';
-        btnProductCreate.disabled = true;
-        try {
-          const body = {
-            name: (document.getElementById('pmName') && document.getElementById('pmName').value) || '',
-            description: (document.getElementById('pmDesc') && document.getElementById('pmDesc').value) || '',
-            price: (document.getElementById('pmPrice') && document.getElementById('pmPrice').value) || '',
-            category: (document.getElementById('pmCat') && document.getElementById('pmCat').value) || '',
-            imageUrl: (document.getElementById('pmImg') && document.getElementById('pmImg').value) || ''
-          };
-          const res = await fetchWithCsrfRetry((token) =>
-            fetch(API_BASE + '/api/products', {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
-              body: JSON.stringify(body)
-            })
-          );
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data.success) throw new Error((data && data.error) || 'Не удалось создать товар');
-          if (typeof showToast === 'function') showToast('Продукт добавлен', 'success');
-          const nm = document.getElementById('pmName');
-          const dc = document.getElementById('pmDesc');
-          const pr = document.getElementById('pmPrice');
-          const ct = document.getElementById('pmCat');
-          const im = document.getElementById('pmImg');
-          if (nm) nm.value = '';
-          if (dc) dc.value = '';
-          if (pr) pr.value = '';
-          if (ct) ct.value = '';
-          if (im) im.value = '';
-          await loadProductsAvailability();
-        } catch (e) {
-          if (errEl) {
-            errEl.textContent = e.message || 'Ошибка';
-            errEl.hidden = false;
-          }
-        } finally {
-          if (spin) spin.style.display = 'none';
-          btnProductCreate.disabled = false;
-        }
-      });
-    }
+    populateCategorySelect();
 
     btnRefresh.addEventListener('click', fetchAll);
     fetchAll();

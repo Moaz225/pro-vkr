@@ -33,6 +33,8 @@ The Blueprint build command is:
 
 This ensures database migrations are applied and Prisma Client is generated during deployment.
 
+After deploy, clients pick up static updates via the service worker cache version (`sw.js` `VERSION`, currently `v6`). Hard-refresh once if the manager UI or menu looks stale.
+
 ## 4) Configure environment variables in Render
 
 The Blueprint defines placeholders, but you must set real secrets in Render.
